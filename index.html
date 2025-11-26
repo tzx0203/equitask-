@@ -453,7 +453,7 @@ function renderTable(){
   lRow += "<th></th></tr>";
 
   // Staff Header (With Colored Underlines)
-  let hRow = "<tr><th>Order Type</th>";
+  let hRow = "<tr><th>Type</th>";
   for (let i=0;i<staffCount;i++) {
     const c = staffColors[i % staffColors.length];
     hRow += `<th style="border-bottom: 2px solid ${c.border}">Staff ${i+1}</th>`;
