@@ -139,8 +139,10 @@
   /* --- CARD GRID --- */
   .results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 16px;
+    /* CHANGED: auto-fit with 140px min forces 2 columns on mobile */
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    width: 100%;
   }
 
   .staff-card {
