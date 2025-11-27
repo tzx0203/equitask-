@@ -3,42 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Workload Balancer</title>
+<title>Workload Cards</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* Light Theme */
-    --primary: #4f46e5;
-    --bg-body: #f8fafc;
-    --bg-card: #ffffff;
-    --bg-sub: #f1f5f9;
+    --bg-body: #f1f5f9;
     --text-main: #0f172a;
     --text-muted: #64748b;
     --border: #e2e8f0;
-    --radius: 12px;
-    --shadow: 0 1px 3px rgba(0,0,0,0.1);
-
-    /* Table */
-    --th-bg: #f8fafc;
-    --sticky-bg: #ffffff;
-    --sticky-shadow: 2px 0 12px -2px rgba(0,0,0,0.05); /* Soft shadow instead of border line */
   }
-
   [data-theme="dark"] {
-    /* Dark Theme */
-    --primary: #818cf8;
     --bg-body: #0f172a;
-    --bg-card: #1e293b;
-    --bg-sub: #334155;
-    --text-main: #f1f5f9;
+    --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --border: #334155;
-    
-    --th-bg: #0f172a;
-    --sticky-bg: #1e293b;
-    --sticky-shadow: 2px 0 12px -2px rgba(0,0,0,0.5);
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -47,204 +27,127 @@
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-body);
     color: var(--text-main);
-    margin: 0;
-    padding: 16px;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
+    margin: 0; padding: 16px;
+    display: flex; justify-content: center;
   }
 
-  .app-wrapper {
-    width: 100%;
-    max-width: 900px;
-    display: flex;
-    flex-direction: column;
+  .app-wrapper { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* --- HEADER & CONFIG (Same as before) --- */
+  header { display: flex; justify-content: space-between; align-items: center; }
+  h1 { font-size: 18px; font-weight: 700; margin: 0; }
+  .theme-btn { background:none; border:none; font-size:18px; cursor:pointer; opacity:0.8; }
+
+  .config-container {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  [data-theme="dark"] .config-container { background: #1e293b; }
+
+  .input-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+  .input-group { flex: 1 1 18%; display: flex; flex-direction: column; gap: 4px; min-width: 60px; }
+  .input-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+  .input-group input {
+    width: 100%; padding: 8px; text-align: center; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main);
+    font-size: 15px; font-weight: 600;
+  }
+  .input-group input:focus { outline: none; border-color: #4f46e5; background: #fff; }
+  [data-theme="dark"] .input-group input:focus { background: #1e293b; }
+
+  .action-strip {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 10px; border-top: 1px solid var(--border); gap: 10px;
+  }
+  .stats-area { display: flex; gap: 8px; }
+  .stat-pill {
+    font-size: 12px; background: var(--bg-body); padding: 4px 8px;
+    border-radius: 6px; color: var(--text-muted); border: 1px solid var(--border);
+  }
+  .stat-pill strong { color: var(--text-main); }
+  
+  .btn-area { display: flex; gap: 6px; }
+  button {
+    cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px 14px;
+    border-radius: 6px; border: none; transition: opacity 0.2s;
+  }
+  .btn-reset { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-go { background: #4f46e5; color: white; }
+  .btn-recalc { background: #10b981; color: white; }
+
+  /* --- NEW CARD GRID --- */
+  .results-grid {
+    display: grid;
+    /* Responsive Grid Logic */
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 16px;
   }
 
-  /* --- Header --- */
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 4px;
-  }
-
-  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
-  
-  .theme-btn {
-    background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;
-    border-radius: 50%; transition: background 0.2s;
-  }
-  .theme-btn:hover { background: var(--bg-sub); }
-
-  /* --- Config Card --- */
-  .config-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
+  .staff-card {
+    background: #fff; border-radius: 12px;
     border: 1px solid var(--border);
-    box-shadow: var(--shadow);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
     overflow: hidden;
+    display: flex; flex-direction: column;
+    position: relative;
+    transition: transform 0.2s;
   }
+  [data-theme="dark"] .staff-card { background: #1e293b; }
 
-  .input-section {
-    padding: 16px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); 
-    gap: 12px;
+  /* Top Color Bar */
+  .card-border-top { height: 4px; width: 100%; }
+
+  .card-header {
+    padding: 12px 12px 0 12px;
+    display: flex; justify-content: space-between; align-items: center;
   }
-
-  @media (min-width: 600px) {
-    .input-section { grid-template-columns: repeat(5, 1fr); }
+  .staff-name { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+  
+  .lock-icon {
+    font-size: 14px; cursor: pointer; color: var(--border);
+    transition: color 0.2s; background: none; border: none; padding: 4px;
   }
+  .lock-icon.locked { color: var(--text-main); }
 
-  .field { display: flex; flex-direction: column; gap: 4px; }
-  .field.team-size { grid-column: span 2; }
-  @media (min-width: 600px) { .field.team-size { grid-column: span 1; } }
-
-  label {
-    font-size: 11px; font-weight: 600; text-transform: uppercase; 
-    color: var(--text-muted); letter-spacing: 0.5px;
+  .card-hero {
+    padding: 2px 12px 10px 12px;
+    text-align: left;
   }
+  .hero-hours {
+    font-size: 28px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1;
+  }
+  .hero-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 
-  input {
-    width: 100%;
+  .card-tasks {
     padding: 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
     background: var(--bg-body);
-    color: var(--text-main);
-    font-size: 16px;
-    font-weight: 500;
-    text-align: center;
-    transition: all 0.2s;
-  }
-  input:focus { outline: none; border-color: var(--primary); background: var(--bg-card); }
-
-  .config-footer {
-    background: var(--bg-sub);
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex: 1; /* Pushes content to fill height */
+    display: flex; flex-direction: column; gap: 8px;
     border-top: 1px solid var(--border);
   }
 
-  @media (min-width: 600px) {
-    .config-footer { flex-direction: row; align-items: center; justify-content: space-between; }
-  }
-
-  .stats-summary {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-  }
-  
-  .stat-badge {
-    background: var(--bg-card);
-    padding: 4px 10px;
-    border-radius: 6px;
+  /* The compact inputs inside the card */
+  .task-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; padding: 6px 8px; border-radius: 6px;
     border: 1px solid var(--border);
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.02);
   }
-  .stat-badge span { color: var(--text-muted); font-weight: 400; font-size: 12px; }
-
-  .actions { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+  [data-theme="dark"] .task-row { background: #1e293b; }
   
-  button {
-    flex: 1;
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: none;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
-  @media (min-width: 600px) { button { flex: 0 0 auto; min-width: 100px; } }
-
-  .btn-primary { background: var(--primary); color: white; }
-  .btn-primary:active { opacity: 0.8; }
+  /* Hide rows with 0 value to keep clean? Optional. Using CSS opacity for now */
+  .task-row.is-zero { display: none; } /* Uncomment to auto-hide 0 rows */
   
-  .btn-sec { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
-  .btn-sec:active { background: var(--border); }
-
-  /* --- Table Container --- */
-  .table-wrapper {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch; 
-    position: relative;
-  }
-
-  table { width: 100%; border-collapse: collapse; min-width: 100%; }
-
-  th, td {
-    padding: 12px 8px;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  /* STICKY COLUMN: Border removed, shadow added */
-  th:first-child, td:first-child {
-    position: sticky;
-    left: 0;
-    background: var(--sticky-bg);
-    z-index: 10;
-    text-align: left;
-    padding-left: 16px;
-    border-right: none; /* REMOVED LINE */
-    box-shadow: var(--sticky-shadow); /* Soft shadow instead */
-    font-weight: 600;
-    min-width: 100px;
-  }
-
-  thead th {
-    background: var(--th-bg);
-    color: var(--text-muted);
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  /* Fix sticky header intersection */
-  thead th:first-child { z-index: 20; background: var(--th-bg); }
-
-  /* Inputs inside table */
-  .cell-input {
-    width: 45px;
-    padding: 6px 0;
-    background: transparent;
-    border: 1px solid transparent;
-    text-align: center;
-    font-weight: 500;
-    border-radius: 6px;
-    transition: all 0.2s;
-  }
-  .cell-input:focus { border-color: var(--primary); background: var(--bg-body); }
+  .task-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
   
-  /* Lock Toggle */
-  .lock-toggle {
-    background: none; border: 1px solid var(--border);
-    border-radius: 20px; padding: 4px 8px; font-size: 10px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
-    margin: 0 auto; color: var(--text-muted);
-    min-width: 60px;
+  .task-input {
+    width: 40px; border: none; background: transparent;
+    text-align: right; font-size: 14px; font-weight: 700; color: var(--text-main);
+    padding: 0; outline: none;
   }
-  .lock-toggle.active { background: var(--text-main); color: var(--bg-card); border-color: var(--text-main); }
 
-  /* Totals */
-  .row-total { font-weight: 700; color: var(--text-main); }
-  .footer-row { background: var(--bg-sub); font-weight: 600; }
-  .footer-row td:first-child { background: var(--bg-sub); }
-
-  .empty-msg { padding: 32px; color: var(--text-muted); font-style: italic; font-size: 13px; }
+  .empty-state { text-align: center; width: 100%; color: var(--text-muted); padding: 40px; font-style: italic; grid-column: 1 / -1; }
 
 </style>
 </head>
@@ -257,67 +160,40 @@
     <button class="theme-btn" onclick="toggleTheme()" id="themeIcon">🌙</button>
   </header>
 
-  <div class="config-card">
-    <div class="input-section">
-      <div class="field team-size">
+  <div class="config-container">
+    <div class="input-strip">
+      <div class="input-group" style="flex: 1 1 100%; max-width: 100%;">
         <label>Team Size</label>
-        <input id="totalStaff" type="number" min="1" placeholder="5" inputmode="numeric">
+        <input id="totalStaff" type="number" min="1" placeholder="4" inputmode="numeric">
       </div>
-      <div class="field">
-        <label>90m</label>
-        <input id="tasks90" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="field">
-        <label>60m</label>
-        <input id="tasks60" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="field">
-        <label>30m</label>
-        <input id="tasks30" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="field">
-        <label>15m</label>
-        <input id="tasks15" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
+      <div class="input-group"><label>90m</label><input id="tasks90" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label>60m</label><input id="tasks60" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label>30m</label><input id="tasks30" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label>15m</label><input id="tasks15" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
     </div>
-
-    <div class="config-footer">
-      <div class="stats-summary">
-        <div class="stat-badge"><span id="lblOrders">Total:</span> <strong id="valOrders">0</strong></div>
-        <div class="stat-badge"><span id="lblTime">Time:</span> <strong id="valHours">0h</strong></div>
+    <div class="action-strip">
+      <div class="stats-area">
+        <div class="stat-pill">Total: <strong id="valOrders">0</strong></div>
+        <div class="stat-pill">Time: <strong id="valHours">0h</strong></div>
       </div>
-      <div class="actions">
-        <button class="btn-sec" onclick="resetAll()">Reset</button>
-        <button id="calcBtn" class="btn-primary" onclick="initialCalculate()">Distribute</button>
-        <button id="recalcBtn" class="btn-primary" onclick="recalculateUnlocked()" style="display:none; background:#10b981;">Recalc</button>
+      <div class="btn-area">
+        <button class="btn-reset" onclick="resetAll()">Reset</button>
+        <button id="calcBtn" class="btn-go" onclick="initialCalculate()">Distribute</button>
+        <button id="recalcBtn" class="btn-recalc" onclick="recalculateUnlocked()" style="display:none;">Recalc</button>
       </div>
     </div>
   </div>
 
-  <div class="table-wrapper">
-    <table id="allocTable">
-      <thead id="thead"></thead>
-      <tbody id="tbody">
-        <tr><td colspan="100%" class="empty-msg">Ready to distribute workload...</td></tr>
-      </tbody>
-    </table>
+  <!-- THE CARD GRID -->
+  <div id="resultsGrid" class="results-grid">
+    <div class="empty-state">Enter team size and orders above...</div>
   </div>
 
 </div>
 
 <script>
-/* ---------- COLORS ---------- */
-// Modern palette: Blue, Emerald, Purple, Amber, Rose, Cyan
-const staffColors = [
-  { bg: "#eff6ff", text: "#1e40af", border: "#3b82f6" }, // Blue
-  { bg: "#ecfdf5", text: "#065f46", border: "#10b981" }, // Green
-  { bg: "#f5f3ff", text: "#5b21b6", border: "#8b5cf6" }, // Purple
-  { bg: "#fffbeb", text: "#92400e", border: "#f59e0b" }, // Amber
-  { bg: "#fff1f2", text: "#9f1239", border: "#f43f5e" }, // Rose
-  { bg: "#ecfeff", text: "#155e75", border: "#06b6d4" }  // Cyan
-];
-
-/* ---------- LOGIC ---------- */
+/* Theme & Colors */
+const staffColors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#f43f5e", "#06b6d4"];
 function toggleTheme() {
   const c = document.documentElement.getAttribute('data-theme');
   const n = c === 'dark' ? 'light' : 'dark';
@@ -327,44 +203,33 @@ function toggleTheme() {
 }
 if(localStorage.getItem('theme') === 'dark') toggleTheme();
 
+/* Logic */
 const toInt = v => { const n = parseInt(v); return isNaN(n)?0:n; }
 const inputVal = id => toInt(document.getElementById(id).value);
-
-let currentData = null; 
-let locked = [];        
-let staffCount = 0;
+let currentData = null; let locked = []; let staffCount = 0;
 
 function updateStats(){
-  const t90 = inputVal("tasks90");
-  const t60 = inputVal("tasks60");
-  const t30 = inputVal("tasks30");
-  const t15 = inputVal("tasks15");
-
-  const total = t90 + t60 + t30 + t15;
-  const mins = (t90*90) + (t60*60) + (t30*30) + (t15*15);
-  const hrs = mins / 60;
-
+  const t90=inputVal("tasks90"), t60=inputVal("tasks60"), t30=inputVal("tasks30"), t15=inputVal("tasks15");
+  const total = t90+t60+t30+t15;
+  const hrs = ((t90*90)+(t60*60)+(t30*30)+(t15*15))/60;
   document.getElementById("valOrders").innerText = total;
-  document.getElementById("valHours").innerText = (Number.isInteger(hrs) ? hrs : hrs.toFixed(1)) + "h";
+  document.getElementById("valHours").innerText = (Number.isInteger(hrs)?hrs:hrs.toFixed(1))+"h";
 }
 
 function distributeByTime(tasks, staffStates) {
     tasks.sort((a, b) => b - a);
     tasks.forEach(dur => {
-        let minMins = Infinity, selIdx = -1;
-        for (let i = 0; i < staffStates.length; i++) {
-            if (staffStates[i].locked) continue; 
-            if (staffStates[i].minutes < minMins) {
-                minMins = staffStates[i].minutes;
-                selIdx = i;
-            }
+        let min = Infinity, idx = -1;
+        for (let i=0; i<staffStates.length; i++) {
+            if (staffStates[i].locked) continue;
+            if (staffStates[i].minutes < min) { min = staffStates[i].minutes; idx = i; }
         }
-        if (selIdx !== -1) {
-            staffStates[selIdx].minutes += dur;
-            if(dur===90) staffStates[selIdx].counts.T90++;
-            if(dur===60) staffStates[selIdx].counts.T60++;
-            if(dur===30) staffStates[selIdx].counts.T30++;
-            if(dur===15) staffStates[selIdx].counts.T15++;
+        if (idx !== -1) {
+            staffStates[idx].minutes += dur;
+            if(dur===90) staffStates[idx].counts.T90++;
+            if(dur===60) staffStates[idx].counts.T60++;
+            if(dur===30) staffStates[idx].counts.T30++;
+            if(dur===15) staffStates[idx].counts.T15++;
         }
     });
 }
@@ -372,28 +237,19 @@ function distributeByTime(tasks, staffStates) {
 function initialCalculate(){
   staffCount = Math.max(1, inputVal("totalStaff"));
   const t90=inputVal("tasks90"), t60=inputVal("tasks60"), t30=inputVal("tasks30"), t15=inputVal("tasks15");
-  
-  if (staffCount <= 0) { alert("Invalid Team Size"); return; }
-  if ((t90+t60+t30+t15) === 0) { alert("No orders"); return; }
+  if(staffCount<=0 || (t90+t60+t30+t15)===0) { alert("Check inputs"); return; }
 
-  let pool = [];
-  for(let i=0;i<t90;i++) pool.push(90);
-  for(let i=0;i<t60;i++) pool.push(60);
-  for(let i=0;i<t30;i++) pool.push(30);
-  for(let i=0;i<t15;i++) pool.push(15);
+  let pool=[];
+  for(let i=0;i<t90;i++) pool.push(90); for(let i=0;i<t60;i++) pool.push(60);
+  for(let i=0;i<t30;i++) pool.push(30); for(let i=0;i<t15;i++) pool.push(15);
 
-  let states = [];
-  for(let i=0; i<staffCount; i++) states.push({ id:i, locked:false, minutes:0, counts:{T90:0,T60:0,T30:0,T15:0} });
-
+  let states=[];
+  for(let i=0;i<staffCount;i++) states.push({id:i,locked:false,minutes:0,counts:{T90:0,T60:0,T30:0,T15:0}});
   distributeByTime(pool, states);
-
-  currentData = { T90:[], T60:[], T30:[], T15:[] };
-  states.forEach(s => {
-      currentData.T90.push(s.counts.T90); currentData.T60.push(s.counts.T60);
-      currentData.T30.push(s.counts.T30); currentData.T15.push(s.counts.T15);
-  });
+  
+  syncData(states);
   locked = new Array(staffCount).fill(false);
-  renderTable();
+  renderGrid();
   document.getElementById("recalcBtn").style.display = "none";
 }
 
@@ -411,170 +267,117 @@ function recalculateUnlocked(){
     states.push({ id:s, locked:l, minutes:l?m:0, counts:{ T90:l?d90:0, T60:l?d60:0, T30:l?d30:0, T15:l?d15:0 } });
   }
 
-  for(let k in held) if(held[k] > ins[k]) { alert("Locked staff exceed inputs"); return; }
-
-  let pool = [];
-  const addPool = (k, dur) => { for(let i=0; i<(ins[k]-held[k]); i++) pool.push(dur); }
-  addPool('T90',90); addPool('T60',60); addPool('T30',30); addPool('T15',15);
-
-  if(pool.length) distributeByTime(pool, states);
-
-  states.forEach(s => {
-      currentData.T90[s.id]=s.counts.T90; currentData.T60[s.id]=s.counts.T60;
-      currentData.T30[s.id]=s.counts.T30; currentData.T15[s.id]=s.counts.T15;
-  });
-
-  ["T90","T60","T30","T15"].forEach(k => {
-    for(let s=0; s<staffCount; s++){
-      if(!locked[s]) {
-        const el = document.querySelector(`.cell-input[data-staff="${s}"][data-type="${k}"]`);
-        if(el) { el.value = currentData[k][s]; applyColor(el, s); }
-      }
-    }
-  });
-
-  updateTableTotals();
-  renderTable();
-}
-
-function renderTable(){
-  const th = document.getElementById("thead");
-  const tb = document.getElementById("tbody");
-  th.innerHTML = ""; tb.innerHTML = "";
-
-  // Lock Header
-  let lRow = "<tr><th>Controls</th>";
-  for (let i=0;i<staffCount;i++){
-    const active = locked[i] ? "active" : "";
-    const txt = locked[i] ? "Locked" : "Lock";
-    const icon = locked[i] ? "🔒" : "🔓";
-    lRow += `<th><button class="lock-toggle ${active}" onclick="toggleLock(${i})">${icon} ${txt}</button></th>`;
-  }
-  lRow += "<th></th></tr>";
-
-  // Staff Header (With Colored Underlines)
-  let hRow = "<tr><th>Type</th>";
-  for (let i=0;i<staffCount;i++) {
-    const c = staffColors[i % staffColors.length];
-    hRow += `<th style="border-bottom: 2px solid ${c.border}">Staff ${i+1}</th>`;
-  }
-  hRow += "<th>Total</th></tr>";
-  th.innerHTML = lRow + hRow;
-
-  // Body
-  const keys = [{k:"T90",l:"90m"},{k:"T60",l:"60m"},{k:"T30",l:"30m"},{k:"T15",l:"15m"}];
-  keys.forEach(obj => {
-    if(currentData && currentData[obj.k]){
-      if(currentData[obj.k].reduce((a,b)=>a+b,0) === 0) return;
-    }
-    let r = `<tr><td>${obj.l}</td>`;
-    let rowTot = 0;
-    for(let i=0;i<staffCount;i++){
-      const val = currentData[obj.k][i] || 0;
-      rowTot += val;
-      const dis = locked[i] ? "disabled" : "";
-      // Input generation
-      r += `<td><input type="number" inputmode="numeric" class="cell-input" data-type="${obj.k}" data-staff="${i}" value="${val}" ${dis}></td>`;
-    }
-    r += `<td class="row-total" data-type="${obj.k}">${rowTot}</td></tr>`;
-    tb.innerHTML += r;
-  });
-
-  // Footer
-  const mets = calcMetrics();
-  let cRow = `<tr class="footer-row"><td>Orders</td>`;
-  for(let i=0;i<staffCount;i++) cRow += `<td>${mets.sc[i]}</td>`;
-  cRow += `<td>${mets.gt}</td></tr>`;
-  tb.innerHTML += cRow;
-
-  let hRow2 = `<tr class="footer-row"><td>Hours</td>`;
-  for(let i=0;i<staffCount;i++) {
-    const h = mets.sm[i]/60;
-    hRow2 += `<td>${Number.isInteger(h)?h:h.toFixed(1)}h</td>`;
-  }
-  const thrs = mets.gm/60;
-  hRow2 += `<td>${Number.isInteger(thrs)?thrs:thrs.toFixed(1)}h</td></tr>`;
-  tb.innerHTML += hRow2;
-
-  // Apply colors and events after HTML injection
-  document.querySelectorAll('.cell-input').forEach(el => {
-    const s = parseInt(el.getAttribute('data-staff'));
-    applyColor(el, s); // Set initial color state
-    el.addEventListener('input', e => { 
-        e.target.value = e.target.value.replace(/[^\d]/g,''); 
-        applyColor(e.target, s); 
-        updateTableTotals(); 
-    });
-  });
-}
-
-// Function to apply colors per staff
-function applyColor(el, staffIndex) {
-    const val = toInt(el.value);
-    const theme = staffColors[staffIndex % staffColors.length];
-    
-    if (val > 0) {
-        el.style.backgroundColor = theme.bg;
-        el.style.color = theme.text;
-        el.style.fontWeight = "700";
-        el.style.borderColor = "transparent";
-    } else {
-        el.style.backgroundColor = "transparent";
-        el.style.color = "inherit";
-        el.style.fontWeight = "500";
-        el.style.borderColor = "transparent";
-    }
-}
-
-function calcMetrics(){
-  let sc=new Array(staffCount).fill(0), sm=new Array(staffCount).fill(0);
-  let tt={T90:0,T60:0,T30:0,T15:0};
-  if(currentData){
-    const add = (k,m) => {
-        currentData[k].forEach((v,i) => { v=v||0; tt[k]+=v; sc[i]+=v; sm[i]+=(v*m); });
-    };
-    add('T90',90); add('T60',60); add('T30',30); add('T15',15);
-  }
-  return { sc, sm, tt, gt:sc.reduce((a,b)=>a+b,0), gm:sm.reduce((a,b)=>a+b,0) };
-}
-
-function updateTableTotals(){
-  ["T90","T60","T30","T15"].forEach(k => {
-    for(let i=0;i<staffCount;i++){
-      const el = document.querySelector(`.cell-input[data-staff="${i}"][data-type="${k}"]`);
-      if(el) currentData[k][i] = toInt(el.value);
-    }
-  });
-  const m = calcMetrics();
-  document.querySelectorAll('.row-total').forEach(el => el.innerText = m.tt[el.getAttribute('data-type')]||0);
+  for(let k in held) if(held[k] > ins[k]) { alert("Locked values exceed inputs"); return; }
   
-  const rows = document.getElementById('tbody').querySelectorAll('tr');
-  if(rows.length > 2) {
-    const cRow = rows[rows.length-2].querySelectorAll('td');
-    const hRow = rows[rows.length-1].querySelectorAll('td');
-    for(let i=0;i<staffCount;i++){
-        cRow[i+1].innerText = m.sc[i];
-        const h = m.sm[i]/60;
-        hRow[i+1].innerText = (Number.isInteger(h)?h:h.toFixed(1))+"h";
-    }
-    cRow[staffCount+1].innerText = m.gt;
-    const th = m.gm/60;
-    hRow[staffCount+1].innerText = (Number.isInteger(th)?th:th.toFixed(1))+"h";
+  let pool = [];
+  const addP = (k, dur) => { for(let i=0; i<(ins[k]-held[k]); i++) pool.push(dur); }
+  addP('T90',90); addP('T60',60); addP('T30',30); addP('T15',15);
+  
+  if(pool.length) distributeByTime(pool, states);
+  
+  syncData(states);
+  // We need to update DOM inputs based on new data
+  renderGrid();
+}
+
+function syncData(states) {
+  currentData = { T90:[], T60:[], T30:[], T15:[] };
+  states.forEach(s => {
+      currentData.T90.push(s.counts.T90); currentData.T60.push(s.counts.T60);
+      currentData.T30.push(s.counts.T30); currentData.T15.push(s.counts.T15);
+  });
+}
+
+function renderGrid(){
+  const grid = document.getElementById("resultsGrid");
+  grid.innerHTML = "";
+
+  for(let i=0; i<staffCount; i++){
+    const c = staffColors[i % staffColors.length];
+    const d90=currentData.T90[i], d60=currentData.T60[i], d30=currentData.T30[i], d15=currentData.T15[i];
+    const totalMins = (d90*90)+(d60*60)+(d30*30)+(d15*15);
+    const hrs = totalMins/60;
+    const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+    const isLocked = locked[i];
+    const lockIcon = isLocked ? "🔒" : "🔓";
+    const lockClass = isLocked ? "locked" : "";
+    
+    // Auto-hide rows that are 0 for cleaner look?
+    const s90 = d90>0?"":"is-zero"; 
+    const s60 = d60>0?"":"is-zero";
+    const s30 = d30>0?"":"is-zero";
+    const s15 = d15>0?"":"is-zero";
+
+    const cardHTML = `
+      <div class="staff-card">
+        <div class="card-border-top" style="background:${c}"></div>
+        <div class="card-header">
+          <div class="staff-name" style="color:${c}">Staff ${i+1}</div>
+          <button class="lock-icon ${lockClass}" onclick="toggleLock(${i})">${lockIcon}</button>
+        </div>
+        <div class="card-hero">
+          <div class="hero-hours">${hrsTxt}<span style="font-size:16px; font-weight:600">h</span></div>
+          <div class="hero-label">Workload</div>
+        </div>
+        <div class="card-tasks">
+          <div class="task-row ${s90}">
+            <span class="task-label">90m</span>
+            <input class="task-input" type="number" data-staff="${i}" data-type="T90" value="${d90}" oninput="manualEdit(this)">
+          </div>
+          <div class="task-row ${s60}">
+            <span class="task-label">60m</span>
+            <input class="task-input" type="number" data-staff="${i}" data-type="T60" value="${d60}" oninput="manualEdit(this)">
+          </div>
+          <div class="task-row ${s30}">
+            <span class="task-label">30m</span>
+            <input class="task-input" type="number" data-staff="${i}" data-type="T30" value="${d30}" oninput="manualEdit(this)">
+          </div>
+          <div class="task-row ${s15}">
+            <span class="task-label">15m</span>
+            <input class="task-input" type="number" data-staff="${i}" data-type="T15" value="${d15}" oninput="manualEdit(this)">
+          </div>
+        </div>
+      </div>
+    `;
+    grid.innerHTML += cardHTML;
   }
+}
+
+function manualEdit(el){
+  const staff = el.getAttribute('data-staff');
+  const type = el.getAttribute('data-type');
+  let val = parseInt(el.value);
+  if(isNaN(val)) val = 0;
+  
+  // Update Data
+  currentData[type][staff] = val;
+  
+  // Re-calculate Hours for this card immediately
+  // Find the card element to update just the text
+  const d90=currentData.T90[staff], d60=currentData.T60[staff], d30=currentData.T30[staff], d15=currentData.T15[staff];
+  const totalMins = (d90*90)+(d60*60)+(d30*30)+(d15*15);
+  const hrs = totalMins/60;
+  const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+  
+  // Update Hours Text DOM
+  const card = el.closest('.staff-card');
+  card.querySelector('.hero-hours').innerHTML = `${hrsTxt}<span style="font-size:16px; font-weight:600">h</span>`;
+  
+  // Optional: Unhide row if user types > 0
+  if(val > 0) el.parentElement.classList.remove('is-zero');
 }
 
 function toggleLock(i){
   locked[i] = !locked[i];
   document.getElementById("recalcBtn").style.display = locked.some(x=>x) ? "inline-block" : "none";
-  renderTable();
+  renderGrid();
 }
 
 function resetAll(){
   document.getElementById("totalStaff").value = "";
   ["tasks90","tasks60","tasks30","tasks15"].forEach(id=>document.getElementById(id).value="");
   updateStats();
-  document.getElementById("thead").innerHTML = "";
-  document.getElementById("tbody").innerHTML = `<tr><td colspan="100%" class="empty-msg">Ready to distribute workload...</td></tr>`;
+  document.getElementById("resultsGrid").innerHTML = `<div class="empty-state">Enter team size and orders above...</div>`;
   currentData = null; locked=[]; staffCount=0;
   document.getElementById("recalcBtn").style.display = "none";
 }
