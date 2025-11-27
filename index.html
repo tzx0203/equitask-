@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Workload Cards</title>
+<title>Smart Balancer Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,13 +13,28 @@
     --text-main: #0f172a;
     --text-muted: #64748b;
     --border: #e2e8f0;
+    --card-bg: #ffffff;
+    --input-bg: #f8fafc;
+    --primary: #4f46e5;
+    --success: #10b981;
+    --mode-color: #64748b; /* Default Time Color */
   }
   [data-theme="dark"] {
     --bg-body: #0f172a;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --border: #334155;
+    --card-bg: #1e293b;
+    --input-bg: #334155;
+    --primary: #818cf8;
+    --success: #34d399;
   }
+
+  body.mode-revenue { --mode-color: #10b981; }
+  body.mode-time { --mode-color: #3b82f6; }
+
+  /* Visibility Logic */
+  body.mode-time .hero-sub { display: none !important; }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -27,117 +42,161 @@
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-body);
     color: var(--text-main);
-    margin: 0; padding: 16px;
+    margin: 0; padding: 20px;
     display: flex; justify-content: center;
   }
 
-  .app-wrapper { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; }
+  .app-wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
 
-  /* --- HEADER & CONFIG (Same as before) --- */
-  header { display: flex; justify-content: space-between; align-items: center; }
-  h1 { font-size: 18px; font-weight: 700; margin: 0; }
-  .theme-btn { background:none; border:none; font-size:18px; cursor:pointer; opacity:0.8; }
+  /* --- HEADER --- */
+  header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.5px; flex: 1; }
+  
+  .header-controls { display: flex; gap: 8px; }
 
+  .icon-btn {
+    background: var(--card-bg); border: 1px solid var(--border); 
+    border-radius: 8px; cursor: pointer; color: var(--text-main);
+    padding: 8px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; width: 40px; height: 40px;
+  }
+  .icon-btn:hover { background: var(--border); }
+  .icon-btn svg { width: 20px; height: 20px; }
+
+  #modeBtn { color: var(--mode-color); border-color: var(--mode-color); font-weight: 700; }
+  #modeBtn.active-rev { background: rgba(16, 185, 129, 0.1); }
+  #modeBtn.active-time { background: rgba(59, 130, 246, 0.1); }
+
+  /* --- CONFIG --- */
   .config-container {
-    background: #fff; border: 1px solid var(--border); border-radius: 12px;
-    padding: 12px; display: flex; flex-direction: column; gap: 12px;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 16px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
-  [data-theme="dark"] .config-container { background: #1e293b; }
 
-  .input-strip { display: flex; gap: 8px; flex-wrap: wrap; }
-  .input-group { flex: 1 1 18%; display: flex; flex-direction: column; gap: 4px; min-width: 60px; }
-  .input-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-  .input-group input {
-    width: 100%; padding: 8px; text-align: center; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main);
-    font-size: 15px; font-weight: 600;
+  .mode-indicator {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--mode-color); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
   }
-  .input-group input:focus { outline: none; border-color: #4f46e5; background: #fff; }
-  [data-theme="dark"] .input-group input:focus { background: #1e293b; }
+  .mode-indicator svg { width: 14px; height: 14px; }
+
+  /* Rates Settings */
+  .rates-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    background: none; border: none; padding: 0; width: fit-content;
+  }
+  .rates-toggle:hover { color: var(--primary); }
+  
+  .rates-panel {
+    display: none; gap: 10px; flex-wrap: wrap; 
+    padding: 12px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border);
+    animation: fadeIn 0.2s ease;
+  }
+  .rates-panel.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .rate-group { flex: 1; min-width: 80px; }
+  .rate-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px; }
+  .rate-group input { 
+    width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border); 
+    font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--card-bg);
+  }
+
+  /* Main Inputs */
+  .input-strip { display: flex; gap: 10px; flex-wrap: wrap; }
+  .input-group { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 70px; }
+  .input-group.full { flex: 100%; max-width: 100%; }
+  
+  .input-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .input-group input {
+    width: 100%; padding: 10px; text-align: center; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
+    font-size: 16px; font-weight: 600; transition: border 0.2s;
+  }
+  .input-group input:focus { outline: none; border-color: var(--primary); background: var(--card-bg); }
 
   .action-strip {
     display: flex; justify-content: space-between; align-items: center;
-    padding-top: 10px; border-top: 1px solid var(--border); gap: 10px;
+    padding-top: 12px; border-top: 1px solid var(--border); gap: 12px;
   }
   .stats-area { display: flex; gap: 8px; }
   .stat-pill {
-    font-size: 12px; background: var(--bg-body); padding: 4px 8px;
+    font-size: 13px; background: var(--input-bg); padding: 6px 10px;
     border-radius: 6px; color: var(--text-muted); border: 1px solid var(--border);
   }
-  .stat-pill strong { color: var(--text-main); }
+  .stat-pill strong { color: var(--text-main); margin-left: 4px; }
   
-  .btn-area { display: flex; gap: 6px; }
-  button {
-    cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px 14px;
-    border-radius: 6px; border: none; transition: opacity 0.2s;
+  .btn-area { display: flex; gap: 8px; }
+  button.action-btn {
+    cursor: pointer; font-size: 13px; font-weight: 600; padding: 10px 16px;
+    border-radius: 8px; border: none; transition: opacity 0.2s;
   }
   .btn-reset { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
-  .btn-go { background: #4f46e5; color: white; }
-  .btn-recalc { background: #10b981; color: white; }
+  .btn-go { background: var(--primary); color: white; }
+  .btn-recalc { background: var(--success); color: white; }
 
-  /* --- NEW CARD GRID --- */
+  /* --- CARD GRID --- */
   .results-grid {
     display: grid;
-    /* Responsive Grid Logic */
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 16px;
   }
 
   .staff-card {
-    background: #fff; border-radius: 12px;
+    background: var(--card-bg); border-radius: 12px;
     border: 1px solid var(--border);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     overflow: hidden;
     display: flex; flex-direction: column;
-    position: relative;
     transition: transform 0.2s;
   }
-  [data-theme="dark"] .staff-card { background: #1e293b; }
 
-  /* Top Color Bar */
   .card-border-top { height: 4px; width: 100%; }
 
   .card-header {
-    padding: 12px 12px 0 12px;
-    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 12px 4px 12px;
+    display: flex; justify-content: space-between; align-items: flex-start;
   }
-  .staff-name { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+  .staff-name { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
   
-  .lock-icon {
-    font-size: 14px; cursor: pointer; color: var(--border);
-    transition: color 0.2s; background: none; border: none; padding: 4px;
+  .lock-btn {
+    background: transparent; border: none; cursor: pointer; 
+    color: var(--text-muted); 
+    padding: 6px; border-radius: 6px;
+    transition: all 0.2s; display: flex; opacity: 0.7;
   }
-  .lock-icon.locked { color: var(--text-main); }
+  .lock-btn:hover { background: var(--input-bg); opacity: 1; }
+  .lock-btn svg { width: 18px; height: 18px; stroke-width: 2; }
+  .lock-btn.locked { color: var(--text-main); opacity: 1; background: var(--input-bg); }
+  .lock-btn.locked svg { fill: currentColor; }
 
-  .card-hero {
-    padding: 2px 12px 10px 12px;
-    text-align: left;
-  }
-  .hero-hours {
-    font-size: 28px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1;
-  }
-  .hero-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .card-hero { padding: 4px 12px 16px 12px; text-align: left; }
+  
+  .hero-main { font-size: 32px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1; }
+  .hero-main span { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-left: 2px; vertical-align: baseline; }
+  
+  .hero-main span.prefix { margin-right: 2px; margin-left: 0; vertical-align: middle; }
+
+  .hero-sub { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .hero-sec { font-size: 13px; font-weight: 600; color: var(--text-muted); background: var(--input-bg); padding: 4px 8px; border-radius: 4px; }
 
   .card-tasks {
-    padding: 10px;
-    background: var(--bg-body);
-    flex: 1; /* Pushes content to fill height */
+    padding: 12px;
+    background: var(--input-bg);
+    flex: 1; 
     display: flex; flex-direction: column; gap: 8px;
     border-top: 1px solid var(--border);
   }
 
-  /* The compact inputs inside the card */
   .task-row {
     display: flex; align-items: center; justify-content: space-between;
-    background: #fff; padding: 6px 8px; border-radius: 6px;
+    background: var(--card-bg); padding: 8px 10px; border-radius: 6px;
     border: 1px solid var(--border);
-    box-shadow: 0 1px 1px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   }
-  [data-theme="dark"] .task-row { background: #1e293b; }
   
-  /* Hide rows with 0 value to keep clean? Optional. Using CSS opacity for now */
-  .task-row.is-zero { display: none; } /* Uncomment to auto-hide 0 rows */
+  .task-row.is-zero { display: none; }
   
   .task-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
   
@@ -151,101 +210,373 @@
 
 </style>
 </head>
-<body>
+<body class="mode-time">
 
 <div class="app-wrapper">
   
   <header>
     <h1>Workload Balancer</h1>
-    <button class="theme-btn" onclick="toggleTheme()" id="themeIcon">🌙</button>
+    <div class="header-controls">
+      <button class="icon-btn active-time" onclick="toggleMode()" id="modeBtn" title="Switch Logic">
+        <!-- Icon injected JS -->
+      </button>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle Theme">
+        <!-- Icon Injected by JS -->
+      </button>
+    </div>
   </header>
 
   <div class="config-container">
-    <div class="input-strip">
-      <div class="input-group" style="flex: 1 1 100%; max-width: 100%;">
-        <label>Team Size</label>
-        <input id="totalStaff" type="number" min="1" placeholder="4" inputmode="numeric">
-      </div>
-      <div class="input-group"><label>90m</label><input id="tasks90" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
-      <div class="input-group"><label>60m</label><input id="tasks60" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
-      <div class="input-group"><label>30m</label><input id="tasks30" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
-      <div class="input-group"><label>15m</label><input id="tasks15" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+    
+    <div class="mode-indicator" id="modeLabel">
+      <!-- Icon Injected by JS -->
+      Prioritizing: HOURS
     </div>
+
+    <!-- Rates Toggle -->
+    <button class="rates-toggle" onclick="toggleRates()">
+      <span>Edit Rates (RM)</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    
+    <div id="ratesPanel" class="rates-panel">
+      <div class="rate-group"><label>90m Price</label><input type="number" id="rate90" value="300" oninput="saveRates()"></div>
+      <div class="rate-group"><label>60m Price</label><input type="number" id="rate60" value="250" oninput="saveRates()"></div>
+      <div class="rate-group"><label>30m Price</label><input type="number" id="rate30" value="130" oninput="saveRates()"></div>
+      <div class="rate-group"><label>15m Price</label><input type="number" id="rate15" value="70" oninput="saveRates()"></div>
+    </div>
+
+    <!-- Main Inputs -->
+    <div class="input-strip">
+      <div class="input-group full">
+        <label>Team Size</label>
+        <input id="totalStaff" type="number" min="1" placeholder="e.g. 4" inputmode="numeric">
+      </div>
+      <div class="input-group"><label id="lbl90">90m</label><input id="tasks90" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl60">60m</label><input id="tasks60" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl30">30m</label><input id="tasks30" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl15">15m</label><input id="tasks15" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+    </div>
+
     <div class="action-strip">
       <div class="stats-area">
-        <div class="stat-pill">Total: <strong id="valOrders">0</strong></div>
+        <div class="stat-pill">Total Orders: <strong id="valCount">0</strong></div>
         <div class="stat-pill">Time: <strong id="valHours">0h</strong></div>
       </div>
       <div class="btn-area">
-        <button class="btn-reset" onclick="resetAll()">Reset</button>
-        <button id="calcBtn" class="btn-go" onclick="initialCalculate()">Distribute</button>
-        <button id="recalcBtn" class="btn-recalc" onclick="recalculateUnlocked()" style="display:none;">Recalc</button>
+        <button class="action-btn btn-reset" onclick="resetAll()">Reset</button>
+        <button id="calcBtn" class="action-btn btn-go" onclick="initialCalculate()">Distribute</button>
+        <button id="recalcBtn" class="action-btn btn-recalc" onclick="recalculateUnlocked()" style="display:none;">Recalc</button>
       </div>
     </div>
   </div>
 
-  <!-- THE CARD GRID -->
   <div id="resultsGrid" class="results-grid">
-    <div class="empty-state">Enter team size and orders above...</div>
+    <div class="empty-state">Enter inputs to distribute workload...</div>
   </div>
 
 </div>
 
 <script>
-/* Theme & Colors */
+/* --- ICONS --- */
+const icons = {
+  moon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
+  sun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+  lockOpen: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`,
+  lockClosed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+  time: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+  cash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>`
+};
+
 const staffColors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#f43f5e", "#06b6d4"];
+
+/* --- STATE --- */
+const toInt = v => { const n = parseInt(v); return isNaN(n)?0:n; }
+const inputVal = id => toInt(document.getElementById(id).value);
+
+let currentData = null; 
+let locked = []; 
+let staffCount = 0;
+let distMode = 'time'; // 'time' or 'revenue'
+
+/* --- UI INIT --- */
+function initUI() {
+  loadRates();
+  renderTheme();
+  renderMode();
+}
+
+/* --- MODE TOGGLE --- */
+function toggleMode() {
+  distMode = distMode === 'time' ? 'revenue' : 'time';
+  renderMode();
+  if (currentData) {
+    if(locked.some(l => l)) recalculateUnlocked();
+    else initialCalculate(); 
+  }
+}
+
+function renderMode() {
+  const btn = document.getElementById('modeBtn');
+  const lbl = document.getElementById('modeLabel');
+  const body = document.body;
+
+  body.classList.remove('mode-time', 'mode-revenue');
+  body.classList.add(`mode-${distMode}`);
+
+  if (distMode === 'time') {
+    btn.innerHTML = icons.time;
+    btn.classList.add('active-time');
+    btn.classList.remove('active-rev');
+    lbl.innerHTML = `${icons.time} Prioritizing: HOURS`;
+  } else {
+    btn.innerHTML = icons.cash;
+    btn.classList.add('active-rev');
+    btn.classList.remove('active-time');
+    lbl.innerHTML = `${icons.cash} Prioritizing: REVENUE`;
+  }
+}
+
+/* --- THEME --- */
 function toggleTheme() {
   const c = document.documentElement.getAttribute('data-theme');
   const n = c === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', n);
-  document.getElementById('themeIcon').innerText = n === 'dark' ? '☀️' : '🌙';
   localStorage.setItem('theme', n);
+  renderTheme();
 }
-if(localStorage.getItem('theme') === 'dark') toggleTheme();
+function renderTheme() {
+  const t = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn').innerHTML = t === 'dark' ? icons.sun : icons.moon;
+}
 
-/* Logic */
-const toInt = v => { const n = parseInt(v); return isNaN(n)?0:n; }
-const inputVal = id => toInt(document.getElementById(id).value);
-let currentData = null; let locked = []; let staffCount = 0;
+/* --- RATES --- */
+function toggleRates() {
+  document.getElementById('ratesPanel').classList.toggle('open');
+}
+function loadRates() {
+  const defaults = { 90: 300, 60: 250, 30: 130, 15: 70 };
+  const saved = localStorage.getItem('workload_rates');
+  const rates = saved ? JSON.parse(saved) : defaults;
+  document.getElementById('rate90').value = rates[90];
+  document.getElementById('rate60').value = rates[60];
+  document.getElementById('rate30').value = rates[30];
+  document.getElementById('rate15').value = rates[15];
+  updateRateLabels(rates);
+}
+function getRates() {
+  return {
+    90: toInt(document.getElementById('rate90').value),
+    60: toInt(document.getElementById('rate60').value),
+    30: toInt(document.getElementById('rate30').value),
+    15: toInt(document.getElementById('rate15').value)
+  };
+}
+function saveRates() {
+  const rates = getRates();
+  localStorage.setItem('workload_rates', JSON.stringify(rates));
+  updateRateLabels(rates);
+  updateStats();
+  if (currentData) renderGrid();
+}
+function updateRateLabels(rates) {
+  document.getElementById('lbl90').innerText = `90m (${rates[90]})`;
+  document.getElementById('lbl60').innerText = `60m (${rates[60]})`;
+  document.getElementById('lbl30').innerText = `30m (${rates[30]})`;
+  document.getElementById('lbl15').innerText = `15m (${rates[15]})`;
+}
 
+/* --- CALCULATIONS --- */
 function updateStats(){
   const t90=inputVal("tasks90"), t60=inputVal("tasks60"), t30=inputVal("tasks30"), t15=inputVal("tasks15");
-  const total = t90+t60+t30+t15;
+  const count = t90+t60+t30+t15;
   const hrs = ((t90*90)+(t60*60)+(t30*30)+(t15*15))/60;
-  document.getElementById("valOrders").innerText = total;
+  
+  document.getElementById("valCount").innerText = count;
   document.getElementById("valHours").innerText = (Number.isInteger(hrs)?hrs:hrs.toFixed(1))+"h";
 }
 
-function distributeByTime(tasks, staffStates) {
-    tasks.sort((a, b) => b - a);
-    tasks.forEach(dur => {
-        let min = Infinity, idx = -1;
+/* 
+  DISTRIBUTION ENGINE
+  1. Greedy Pass (Approximate)
+  2. Optimization Pass (Global Variance Check)
+*/
+function distribute(tasks, staffStates) {
+    // 1. Initial Sort
+    tasks.sort((a, b) => {
+      if (distMode === 'time') {
+        return b.dur - a.dur;
+      } else {
+        if (b.val !== a.val) return b.val - a.val;
+        return b.dur - a.dur;
+      }
+    });
+
+    // 2. Greedy Assignment
+    tasks.forEach(task => {
+        let bestIdx = -1;
+        let minPrimary = Infinity;
+        let minSecondary = Infinity;
+
         for (let i=0; i<staffStates.length; i++) {
             if (staffStates[i].locked) continue;
-            if (staffStates[i].minutes < min) { min = staffStates[i].minutes; idx = i; }
+            
+            const sRev = staffStates[i].revenue;
+            const sTime = staffStates[i].minutes;
+            
+            const currentPrimary = distMode === 'time' ? sTime : sRev;
+            const currentSecondary = distMode === 'time' ? 0 : sTime;
+
+            if (currentPrimary < minPrimary) {
+                minPrimary = currentPrimary;
+                minSecondary = currentSecondary;
+                bestIdx = i;
+            } else if (currentPrimary === minPrimary) {
+                if (distMode === 'revenue' && currentSecondary < minSecondary) {
+                    minSecondary = currentSecondary;
+                    bestIdx = i;
+                } else if (distMode === 'time') {
+                   bestIdx = i; 
+                }
+            }
         }
-        if (idx !== -1) {
-            staffStates[idx].minutes += dur;
-            if(dur===90) staffStates[idx].counts.T90++;
-            if(dur===60) staffStates[idx].counts.T60++;
-            if(dur===30) staffStates[idx].counts.T30++;
-            if(dur===15) staffStates[idx].counts.T15++;
+
+        if (bestIdx !== -1) {
+            assignTask(staffStates[bestIdx], task);
         }
     });
+
+    // 3. OPTIMIZATION PASS (Global All-Pairs Check)
+    optimizeDistribution(staffStates);
 }
+
+function assignTask(staff, task) {
+    staff.minutes += task.dur;
+    staff.revenue += task.val;
+    staff.tasks.push(task); 
+    
+    if(task.dur===90) staff.counts.T90++;
+    if(task.dur===60) staff.counts.T60++;
+    if(task.dur===30) staff.counts.T30++;
+    if(task.dur===15) staff.counts.T15++;
+}
+
+function removeTask(staff, taskIndex) {
+    const task = staff.tasks[taskIndex];
+    staff.minutes -= task.dur;
+    staff.revenue -= task.val;
+    staff.tasks.splice(taskIndex, 1);
+
+    if(task.dur===90) staff.counts.T90--;
+    if(task.dur===60) staff.counts.T60--;
+    if(task.dur===30) staff.counts.T30--;
+    if(task.dur===15) staff.counts.T15--;
+    return task;
+}
+
+function optimizeDistribution(staffStates) {
+    const activeStaff = staffStates.filter(s => !s.locked);
+    if (activeStaff.length < 2) return;
+
+    let improved = true;
+    let limit = 2000; // High limit to ensure deep search
+
+    while (improved && limit > 0) {
+        improved = false;
+        limit--;
+
+        // Calculate Global Metric (Range)
+        let metrics = activeStaff.map(getMetric);
+        let globalMin = Math.min(...metrics);
+        let globalMax = Math.max(...metrics);
+        let currentRange = globalMax - globalMin;
+
+        if (currentRange === 0) break; // Perfection reached
+
+        // Check All vs All Pairs
+        for (let i = 0; i < activeStaff.length; i++) {
+            for (let j = 0; j < activeStaff.length; j++) {
+                if (i === j) continue;
+
+                let s1 = activeStaff[i];
+                let s2 = activeStaff[j];
+
+                // TRY SWAP: Give T1, Take T2
+                for (let t1 = 0; t1 < s1.tasks.length; t1++) {
+                    for (let t2 = 0; t2 < s2.tasks.length; t2++) {
+                        
+                        let task1 = s1.tasks[t1];
+                        let task2 = s2.tasks[t2];
+                        let val1 = getVal(task1);
+                        let val2 = getVal(task2);
+
+                        // If tasks are identical, skip
+                        if (val1 === val2) continue;
+
+                        // Simulate new metrics for these two
+                        let s1New = getMetric(s1) - val1 + val2;
+                        let s2New = getMetric(s2) - val2 + val1;
+
+                        // Check if this swap reduces the GLOBAL range
+                        // We construct a theoretical new array of metrics
+                        let newMetrics = [...metrics];
+                        newMetrics[i] = s1New;
+                        newMetrics[j] = s2New;
+                        
+                        let newMax = Math.max(...newMetrics);
+                        let newMin = Math.min(...newMetrics);
+                        let newRange = newMax - newMin;
+
+                        if (newRange < currentRange) {
+                            // EXECUTE SWAP
+                            removeTask(s1, t1);
+                            removeTask(s2, t2);
+                            assignTask(s1, task2);
+                            assignTask(s2, task1);
+                            improved = true;
+                            // Update local metrics array for loop continuation
+                            metrics[i] = s1New; 
+                            metrics[j] = s2New;
+                            currentRange = newRange;
+                            break; // Break inner loop to restart logic
+                        }
+                    }
+                    if (improved) break;
+                }
+                if (improved) break;
+            }
+            if (improved) break;
+        }
+    }
+}
+
+function getMetric(staff) {
+    return distMode === 'time' ? staff.minutes : staff.revenue;
+}
+function getVal(task) {
+    return distMode === 'time' ? task.dur : task.val;
+}
+
 
 function initialCalculate(){
   staffCount = Math.max(1, inputVal("totalStaff"));
   const t90=inputVal("tasks90"), t60=inputVal("tasks60"), t30=inputVal("tasks30"), t15=inputVal("tasks15");
-  if(staffCount<=0 || (t90+t60+t30+t15)===0) { alert("Check inputs"); return; }
+  if(staffCount<=0 || (t90+t60+t30+t15)===0) { alert("Please check inputs"); return; }
 
+  const RATES = getRates();
   let pool=[];
-  for(let i=0;i<t90;i++) pool.push(90); for(let i=0;i<t60;i++) pool.push(60);
-  for(let i=0;i<t30;i++) pool.push(30); for(let i=0;i<t15;i++) pool.push(15);
+  const addTask = (dur, count) => { for(let i=0; i<count; i++) pool.push({dur:dur, val:RATES[dur]}); }
+  addTask(90, t90); addTask(60, t60); addTask(30, t30); addTask(15, t15);
 
   let states=[];
-  for(let i=0;i<staffCount;i++) states.push({id:i,locked:false,minutes:0,counts:{T90:0,T60:0,T30:0,T15:0}});
-  distributeByTime(pool, states);
+  for(let i=0;i<staffCount;i++) states.push({
+    id:i, locked:false, minutes:0, revenue:0,
+    tasks: [], // Store actual task objects
+    counts:{T90:0,T60:0,T30:0,T15:0}
+  });
+
+  distribute(pool, states);
   
   syncData(states);
   locked = new Array(staffCount).fill(false);
@@ -255,6 +586,7 @@ function initialCalculate(){
 
 function recalculateUnlocked(){
   if (!currentData) return;
+  const RATES = getRates();
   const ins = { T90:inputVal("tasks90"), T60:inputVal("tasks60"), T30:inputVal("tasks30"), T15:inputVal("tasks15") };
   let held = { T90:0, T60:0, T30:0, T15:0 };
   let states = [];
@@ -262,21 +594,37 @@ function recalculateUnlocked(){
   for (let s=0; s<staffCount; s++){
     const l = locked[s];
     const d90=currentData.T90[s], d60=currentData.T60[s], d30=currentData.T30[s], d15=currentData.T15[s];
-    if(l) { held.T90+=d90; held.T60+=d60; held.T30+=d30; held.T15+=d15; }
+    
+    // Reconstruct state
+    let sTasks = [];
+    if(l) { 
+        held.T90+=d90; held.T60+=d60; held.T30+=d30; held.T15+=d15; 
+        for(let k=0; k<d90; k++) sTasks.push({dur:90, val:RATES[90]});
+        for(let k=0; k<d60; k++) sTasks.push({dur:60, val:RATES[60]});
+        for(let k=0; k<d30; k++) sTasks.push({dur:30, val:RATES[30]});
+        for(let k=0; k<d15; k++) sTasks.push({dur:15, val:RATES[15]});
+    }
+    
     const m = (d90*90)+(d60*60)+(d30*30)+(d15*15);
-    states.push({ id:s, locked:l, minutes:l?m:0, counts:{ T90:l?d90:0, T60:l?d60:0, T30:l?d30:0, T15:l?d15:0 } });
+    const r = (d90*RATES[90])+(d60*RATES[60])+(d30*RATES[30])+(d15*RATES[15]);
+
+    states.push({ 
+      id:s, locked:l, minutes:l?m:0, revenue:l?r:0, 
+      tasks: sTasks,
+      counts:{ T90:l?d90:0, T60:l?d60:0, T30:l?d30:0, T15:l?d15:0 } 
+    });
   }
 
   for(let k in held) if(held[k] > ins[k]) { alert("Locked values exceed inputs"); return; }
   
   let pool = [];
-  const addP = (k, dur) => { for(let i=0; i<(ins[k]-held[k]); i++) pool.push(dur); }
-  addP('T90',90); addP('T60',60); addP('T30',30); addP('T15',15);
+  const addP = (k, dur, rate) => { for(let i=0; i<(ins[k]-held[k]); i++) pool.push({dur:dur, val:rate}); }
+  addP('T90',90, RATES[90]); addP('T60',60, RATES[60]); 
+  addP('T30',30, RATES[30]); addP('T15',15, RATES[15]);
   
-  if(pool.length) distributeByTime(pool, states);
+  if(pool.length) distribute(pool, states);
   
   syncData(states);
-  // We need to update DOM inputs based on new data
   renderGrid();
 }
 
@@ -291,33 +639,46 @@ function syncData(states) {
 function renderGrid(){
   const grid = document.getElementById("resultsGrid");
   grid.innerHTML = "";
+  const RATES = getRates();
 
   for(let i=0; i<staffCount; i++){
     const c = staffColors[i % staffColors.length];
     const d90=currentData.T90[i], d60=currentData.T60[i], d30=currentData.T30[i], d15=currentData.T15[i];
+    
     const totalMins = (d90*90)+(d60*60)+(d30*30)+(d15*15);
+    const totalRev = (d90*RATES[90])+(d60*RATES[60])+(d30*RATES[30])+(d15*RATES[15]);
+    
     const hrs = totalMins/60;
     const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
-    const isLocked = locked[i];
-    const lockIcon = isLocked ? "🔒" : "🔓";
-    const lockClass = isLocked ? "locked" : "";
     
-    // Auto-hide rows that are 0 for cleaner look?
-    const s90 = d90>0?"":"is-zero"; 
-    const s60 = d60>0?"":"is-zero";
-    const s30 = d30>0?"":"is-zero";
-    const s15 = d15>0?"":"is-zero";
+    const isLocked = locked[i];
+    const lockClass = isLocked ? "locked" : "";
+    const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
+    
+    let heroHTML, subHTML;
+    if (distMode === 'time') {
+        heroHTML = `${hrsTxt}<span>h</span>`;
+        subHTML = ``; 
+    } else {
+        heroHTML = `<span class="prefix">RM</span>${totalRev}`;
+        subHTML = `${hrsTxt}h`;
+    }
+    
+    const s90 = d90>0?"":"is-zero"; const s60 = d60>0?"":"is-zero";
+    const s30 = d30>0?"":"is-zero"; const s15 = d15>0?"":"is-zero";
 
     const cardHTML = `
       <div class="staff-card">
         <div class="card-border-top" style="background:${c}"></div>
         <div class="card-header">
           <div class="staff-name" style="color:${c}">Staff ${i+1}</div>
-          <button class="lock-icon ${lockClass}" onclick="toggleLock(${i})">${lockIcon}</button>
+          <button class="lock-btn ${lockClass}" onclick="toggleLock(${i})" aria-label="Lock Staff">${lockIcon}</button>
         </div>
         <div class="card-hero">
-          <div class="hero-hours">${hrsTxt}<span style="font-size:16px; font-weight:600">h</span></div>
-          <div class="hero-label">Workload</div>
+          <div class="hero-main">${heroHTML}</div>
+          <div class="hero-sub">
+            <div class="hero-sec">${subHTML}</div>
+          </div>
         </div>
         <div class="card-tasks">
           <div class="task-row ${s90}">
@@ -349,21 +710,23 @@ function manualEdit(el){
   let val = parseInt(el.value);
   if(isNaN(val)) val = 0;
   
-  // Update Data
   currentData[type][staff] = val;
+  const RATES = getRates();
   
-  // Re-calculate Hours for this card immediately
-  // Find the card element to update just the text
   const d90=currentData.T90[staff], d60=currentData.T60[staff], d30=currentData.T30[staff], d15=currentData.T15[staff];
   const totalMins = (d90*90)+(d60*60)+(d30*30)+(d15*15);
+  const totalRev = (d90*RATES[90])+(d60*RATES[60])+(d30*RATES[30])+(d15*RATES[15]);
   const hrs = totalMins/60;
   const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
   
-  // Update Hours Text DOM
   const card = el.closest('.staff-card');
-  card.querySelector('.hero-hours').innerHTML = `${hrsTxt}<span style="font-size:16px; font-weight:600">h</span>`;
+  if (distMode === 'time') {
+    card.querySelector('.hero-main').innerHTML = `${hrsTxt}<span>h</span>`;
+  } else {
+    card.querySelector('.hero-main').innerHTML = `<span class="prefix">RM</span>${totalRev}`;
+    card.querySelector('.hero-sec').innerHTML = `${hrsTxt}h`;
+  }
   
-  // Optional: Unhide row if user types > 0
   if(val > 0) el.parentElement.classList.remove('is-zero');
 }
 
@@ -377,10 +740,13 @@ function resetAll(){
   document.getElementById("totalStaff").value = "";
   ["tasks90","tasks60","tasks30","tasks15"].forEach(id=>document.getElementById(id).value="");
   updateStats();
-  document.getElementById("resultsGrid").innerHTML = `<div class="empty-state">Enter team size and orders above...</div>`;
+  document.getElementById("resultsGrid").innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
   currentData = null; locked=[]; staffCount=0;
   document.getElementById("recalcBtn").style.display = "none";
 }
+
+// Start
+initUI();
 </script>
 </body>
 </html>
