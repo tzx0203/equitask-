@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Smart Balancer Pro</title>
+<title>Custom Balancer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
     --input-bg: #f8fafc;
     --primary: #4f46e5;
     --success: #10b981;
-    --mode-color: #64748b; /* Default Time Color */
+    --mode-color: #64748b;
   }
   [data-theme="dark"] {
     --bg-body: #0f172a;
@@ -32,8 +32,6 @@
 
   body.mode-revenue { --mode-color: #10b981; }
   body.mode-time { --mode-color: #3b82f6; }
-
-  /* Visibility Logic */
   body.mode-time .hero-sub { display: none !important; }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -51,7 +49,6 @@
   /* --- HEADER --- */
   header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.5px; flex: 1; }
-  
   .header-controls { display: flex; gap: 8px; }
 
   .icon-btn {
@@ -62,7 +59,6 @@
   }
   .icon-btn:hover { background: var(--border); }
   .icon-btn svg { width: 20px; height: 20px; }
-
   #modeBtn { color: var(--mode-color); border-color: var(--mode-color); font-weight: 700; }
   #modeBtn.active-rev { background: rgba(16, 185, 129, 0.1); }
   #modeBtn.active-time { background: rgba(59, 130, 246, 0.1); }
@@ -89,16 +85,17 @@
   .rates-toggle:hover { color: var(--primary); }
   
   .rates-panel {
-    display: none; gap: 10px; flex-wrap: wrap; 
+    display: none; flex-direction: column; gap: 12px;
     padding: 12px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border);
     animation: fadeIn 0.2s ease;
   }
   .rates-panel.open { display: flex; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
-  .rate-group { flex: 1; min-width: 80px; }
-  .rate-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px; }
-  .rate-group input { 
+  
+  .rate-row { display: flex; gap: 10px; align-items: center; }
+  .rate-label { font-size: 12px; font-weight: 700; width: 50px; color: var(--text-muted); }
+  .rate-input-group { flex: 1; display: flex; gap: 8px; align-items: center; }
+  .rate-input-group span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .rate-input { 
     width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border); 
     font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--card-bg);
   }
@@ -108,7 +105,7 @@
   .input-group { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 70px; }
   .input-group.full { flex: 100%; max-width: 100%; }
   
-  .input-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .input-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; height: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .input-group input {
     width: 100%; padding: 10px; text-align: center; border-radius: 8px;
     border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
@@ -139,10 +136,8 @@
   /* --- CARD GRID --- */
   .results-grid {
     display: grid;
-    /* CHANGED: auto-fit with 140px min forces 2 columns on mobile */
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    width: 100%;
+    gap: 12px; width: 100%;
   }
 
   .staff-card {
@@ -164,8 +159,7 @@
   
   .lock-btn {
     background: transparent; border: none; cursor: pointer; 
-    color: var(--text-muted); 
-    padding: 6px; border-radius: 6px;
+    color: var(--text-muted); padding: 6px; border-radius: 6px;
     transition: all 0.2s; display: flex; opacity: 0.7;
   }
   .lock-btn:hover { background: var(--input-bg); opacity: 1; }
@@ -177,7 +171,6 @@
   
   .hero-main { font-size: 32px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1; }
   .hero-main span { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-left: 2px; vertical-align: baseline; }
-  
   .hero-main span.prefix { margin-right: 2px; margin-left: 0; vertical-align: middle; }
 
   .hero-sub { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
@@ -237,15 +230,13 @@
 
     <!-- Rates Toggle -->
     <button class="rates-toggle" onclick="toggleRates()">
-      <span>Edit Rates (RM)</span>
+      <span>Edit Tasks Types</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     
+    <!-- Dynamic Rates Panel -->
     <div id="ratesPanel" class="rates-panel">
-      <div class="rate-group"><label>90m Price</label><input type="number" id="rate90" value="350" oninput="saveRates()"></div>
-      <div class="rate-group"><label>60m Price</label><input type="number" id="rate60" value="120" oninput="saveRates()"></div>
-      <div class="rate-group"><label>30m Price</label><input type="number" id="rate30" value="205" oninput="saveRates()"></div>
-      <div class="rate-group"><label>15m Price</label><input type="number" id="rate15" value="0" oninput="saveRates()"></div>
+      <!-- Generated by JS -->
     </div>
 
     <!-- Main Inputs -->
@@ -254,15 +245,30 @@
         <label>Team Size</label>
         <input id="totalStaff" type="number" min="1" placeholder="e.g. 4" inputmode="numeric">
       </div>
-      <div class="input-group"><label id="lbl90">90m</label><input id="tasks90" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
-      <div class="input-group"><label id="lbl60">60m</label><input id="tasks60" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
-      <div class="input-group"><label id="lbl30">30m</label><input id="tasks30" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
-      <div class="input-group"><label id="lbl15">15m</label><input id="tasks15" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      
+      <!-- Dynamic Inputs -->
+      <div class="input-group">
+        <label id="lbl_0">Task 1</label>
+        <input id="in_0" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
+      </div>
+      <div class="input-group">
+        <label id="lbl_1">Task 2</label>
+        <input id="in_1" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
+      </div>
+      <div class="input-group">
+        <label id="lbl_2">Task 3</label>
+        <input id="in_2" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
+      </div>
+      <div class="input-group">
+        <label id="lbl_3">Task 4</label>
+        <input id="in_3" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
+      </div>
+
     </div>
 
     <div class="action-strip">
       <div class="stats-area">
-        <div class="stat-pill">Total Orders: <strong id="valCount">0</strong></div>
+        <div class="stat-pill">Total: <strong id="valCount">0</strong></div>
         <div class="stat-pill">Time: <strong id="valHours">0h</strong></div>
       </div>
       <div class="btn-area">
@@ -301,14 +307,37 @@ let locked = [];
 let staffCount = 0;
 let distMode = 'time'; // 'time' or 'revenue'
 
-/* --- UI INIT --- */
+// CONFIG: 4 Slots. Each has { min, val }
+let taskConfig = [
+  { min: 90, val: 300 },
+  { min: 60, val: 250 },
+  { min: 30, val: 130 },
+  { min: 15, val: 70 }
+];
+
+/* --- INIT --- */
 function initUI() {
-  loadRates();
+  loadConfig();
+  renderRatesPanel();
   renderTheme();
   renderMode();
 }
 
-/* --- MODE TOGGLE --- */
+/* --- THEME --- */
+function toggleTheme() {
+  const c = document.documentElement.getAttribute('data-theme');
+  const n = c === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', n);
+  localStorage.setItem('theme', n);
+  renderTheme();
+}
+function renderTheme() {
+  const t = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn').innerHTML = t === 'dark' ? icons.sun : icons.moon;
+}
+
+/* --- MODE --- */
 function toggleMode() {
   distMode = distMode === 'time' ? 'revenue' : 'time';
   renderMode();
@@ -317,7 +346,6 @@ function toggleMode() {
     else initialCalculate(); 
   }
 }
-
 function renderMode() {
   const btn = document.getElementById('modeBtn');
   const lbl = document.getElementById('modeLabel');
@@ -339,71 +367,75 @@ function renderMode() {
   }
 }
 
-/* --- THEME --- */
-function toggleTheme() {
-  const c = document.documentElement.getAttribute('data-theme');
-  const n = c === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', n);
-  localStorage.setItem('theme', n);
-  renderTheme();
-}
-function renderTheme() {
-  const t = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeBtn').innerHTML = t === 'dark' ? icons.sun : icons.moon;
-}
-
-/* --- RATES --- */
+/* --- DYNAMIC CONFIG --- */
 function toggleRates() {
   document.getElementById('ratesPanel').classList.toggle('open');
 }
-function loadRates() {
-  const defaults = { 90: 350, 60: 120, 30: 205, 15: 70 };
-  const saved = localStorage.getItem('workload_rates');
-  const rates = saved ? JSON.parse(saved) : defaults;
-  document.getElementById('rate90').value = rates[90];
-  document.getElementById('rate60').value = rates[60];
-  document.getElementById('rate30').value = rates[30];
-  document.getElementById('rate15').value = rates[15];
-  updateRateLabels(rates);
+
+function loadConfig() {
+  const saved = localStorage.getItem('task_config');
+  if(saved) taskConfig = JSON.parse(saved);
+  updateInputLabels();
 }
-function getRates() {
-  return {
-    90: toInt(document.getElementById('rate90').value),
-    60: toInt(document.getElementById('rate60').value),
-    30: toInt(document.getElementById('rate30').value),
-    15: toInt(document.getElementById('rate15').value)
-  };
-}
-function saveRates() {
-  const rates = getRates();
-  localStorage.setItem('workload_rates', JSON.stringify(rates));
-  updateRateLabels(rates);
+
+function saveConfig() {
+  // Read inputs from Rates Panel
+  for(let i=0; i<4; i++) {
+    taskConfig[i].min = toInt(document.getElementById(`cfg_min_${i}`).value);
+    taskConfig[i].val = toInt(document.getElementById(`cfg_val_${i}`).value);
+  }
+  localStorage.setItem('task_config', JSON.stringify(taskConfig));
+  updateInputLabels();
   updateStats();
   if (currentData) renderGrid();
 }
-function updateRateLabels(rates) {
-  document.getElementById('lbl90').innerText = `90m (${rates[90]})`;
-  document.getElementById('lbl60').innerText = `60m (${rates[60]})`;
-  document.getElementById('lbl30').innerText = `30m (${rates[30]})`;
-  document.getElementById('lbl15').innerText = `15m (${rates[15]})`;
+
+function renderRatesPanel() {
+  const container = document.getElementById('ratesPanel');
+  container.innerHTML = '';
+  
+  taskConfig.forEach((cfg, i) => {
+    const row = `
+      <div class="rate-row">
+        <div class="rate-label">Task ${i+1}</div>
+        <div class="rate-input-group">
+           <input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()">
+           <span>m</span>
+        </div>
+        <div class="rate-input-group">
+           <input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()">
+           <span>RM</span>
+        </div>
+      </div>
+    `;
+    container.innerHTML += row;
+  });
 }
+
+function updateInputLabels() {
+  taskConfig.forEach((cfg, i) => {
+    document.getElementById(`lbl_${i}`).innerText = `${cfg.min}m (${cfg.val})`;
+  });
+}
+
 
 /* --- CALCULATIONS --- */
 function updateStats(){
-  const t90=inputVal("tasks90"), t60=inputVal("tasks60"), t30=inputVal("tasks30"), t15=inputVal("tasks15");
-  const count = t90+t60+t30+t15;
-  const hrs = ((t90*90)+(t60*60)+(t30*30)+(t15*15))/60;
+  let count = 0;
+  let hrs = 0;
+  
+  for(let i=0; i<4; i++) {
+    const qty = inputVal(`in_${i}`);
+    count += qty;
+    hrs += (qty * taskConfig[i].min);
+  }
+  hrs = hrs / 60;
   
   document.getElementById("valCount").innerText = count;
   document.getElementById("valHours").innerText = (Number.isInteger(hrs)?hrs:hrs.toFixed(1))+"h";
 }
 
-/* 
-  DISTRIBUTION ENGINE
-  1. Greedy Pass (Approximate)
-  2. Optimization Pass (Global Variance Check)
-*/
+/* --- DISTRIBUTION LOGIC --- */
 function distribute(tasks, staffStates) {
     // 1. Initial Sort
     tasks.sort((a, b) => {
@@ -449,7 +481,7 @@ function distribute(tasks, staffStates) {
         }
     });
 
-    // 3. OPTIMIZATION PASS (Global All-Pairs Check)
+    // 3. OPTIMIZATION PASS
     optimizeDistribution(staffStates);
 }
 
@@ -457,11 +489,7 @@ function assignTask(staff, task) {
     staff.minutes += task.dur;
     staff.revenue += task.val;
     staff.tasks.push(task); 
-    
-    if(task.dur===90) staff.counts.T90++;
-    if(task.dur===60) staff.counts.T60++;
-    if(task.dur===30) staff.counts.T30++;
-    if(task.dur===15) staff.counts.T15++;
+    staff.counts[task.typeIdx]++;
 }
 
 function removeTask(staff, taskIndex) {
@@ -469,11 +497,7 @@ function removeTask(staff, taskIndex) {
     staff.minutes -= task.dur;
     staff.revenue -= task.val;
     staff.tasks.splice(taskIndex, 1);
-
-    if(task.dur===90) staff.counts.T90--;
-    if(task.dur===60) staff.counts.T60--;
-    if(task.dur===30) staff.counts.T30--;
-    if(task.dur===15) staff.counts.T15--;
+    staff.counts[task.typeIdx]--;
     return task;
 }
 
@@ -482,19 +506,18 @@ function optimizeDistribution(staffStates) {
     if (activeStaff.length < 2) return;
 
     let improved = true;
-    let limit = 2000; // High limit to ensure deep search
+    let limit = 2000; 
 
     while (improved && limit > 0) {
         improved = false;
         limit--;
 
-        // Calculate Global Metric (Range)
         let metrics = activeStaff.map(getMetric);
         let globalMin = Math.min(...metrics);
         let globalMax = Math.max(...metrics);
         let currentRange = globalMax - globalMin;
 
-        if (currentRange === 0) break; // Perfection reached
+        if (currentRange === 0) break; 
 
         // Check All vs All Pairs
         for (let i = 0; i < activeStaff.length; i++) {
@@ -504,7 +527,7 @@ function optimizeDistribution(staffStates) {
                 let s1 = activeStaff[i];
                 let s2 = activeStaff[j];
 
-                // TRY SWAP: Give T1, Take T2
+                // TRY SWAP
                 for (let t1 = 0; t1 < s1.tasks.length; t1++) {
                     for (let t2 = 0; t2 < s2.tasks.length; t2++) {
                         
@@ -513,15 +536,11 @@ function optimizeDistribution(staffStates) {
                         let val1 = getVal(task1);
                         let val2 = getVal(task2);
 
-                        // If tasks are identical, skip
                         if (val1 === val2) continue;
 
-                        // Simulate new metrics for these two
                         let s1New = getMetric(s1) - val1 + val2;
                         let s2New = getMetric(s2) - val2 + val1;
 
-                        // Check if this swap reduces the GLOBAL range
-                        // We construct a theoretical new array of metrics
                         let newMetrics = [...metrics];
                         newMetrics[i] = s1New;
                         newMetrics[j] = s2New;
@@ -531,17 +550,15 @@ function optimizeDistribution(staffStates) {
                         let newRange = newMax - newMin;
 
                         if (newRange < currentRange) {
-                            // EXECUTE SWAP
                             removeTask(s1, t1);
                             removeTask(s2, t2);
                             assignTask(s1, task2);
                             assignTask(s2, task1);
                             improved = true;
-                            // Update local metrics array for loop continuation
                             metrics[i] = s1New; 
                             metrics[j] = s2New;
                             currentRange = newRange;
-                            break; // Break inner loop to restart logic
+                            break; 
                         }
                     }
                     if (improved) break;
@@ -563,19 +580,29 @@ function getVal(task) {
 
 function initialCalculate(){
   staffCount = Math.max(1, inputVal("totalStaff"));
-  const t90=inputVal("tasks90"), t60=inputVal("tasks60"), t30=inputVal("tasks30"), t15=inputVal("tasks15");
-  if(staffCount<=0 || (t90+t60+t30+t15)===0) { alert("Please check inputs"); return; }
+  
+  // Build Pool based on Config
+  let pool = [];
+  let totalTasks = 0;
+  for(let i=0; i<4; i++) {
+    const qty = inputVal(`in_${i}`);
+    totalTasks += qty;
+    for(let k=0; k<qty; k++) {
+        pool.push({ 
+            dur: taskConfig[i].min, 
+            val: taskConfig[i].val, 
+            typeIdx: i 
+        });
+    }
+  }
 
-  const RATES = getRates();
-  let pool=[];
-  const addTask = (dur, count) => { for(let i=0; i<count; i++) pool.push({dur:dur, val:RATES[dur]}); }
-  addTask(90, t90); addTask(60, t60); addTask(30, t30); addTask(15, t15);
+  if(staffCount<=0 || totalTasks===0) { alert("Please check inputs"); return; }
 
   let states=[];
   for(let i=0;i<staffCount;i++) states.push({
     id:i, locked:false, minutes:0, revenue:0,
-    tasks: [], // Store actual task objects
-    counts:{T90:0,T60:0,T30:0,T15:0}
+    tasks: [],
+    counts: [0,0,0,0] // Track counts for config indices 0-3
   });
 
   distribute(pool, states);
@@ -588,41 +615,50 @@ function initialCalculate(){
 
 function recalculateUnlocked(){
   if (!currentData) return;
-  const RATES = getRates();
-  const ins = { T90:inputVal("tasks90"), T60:inputVal("tasks60"), T30:inputVal("tasks30"), T15:inputVal("tasks15") };
-  let held = { T90:0, T60:0, T30:0, T15:0 };
+  
+  // Read inputs
+  let ins = [];
+  for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+
+  let held = [0,0,0,0];
   let states = [];
 
   for (let s=0; s<staffCount; s++){
     const l = locked[s];
-    const d90=currentData.T90[s], d60=currentData.T60[s], d30=currentData.T30[s], d15=currentData.T15[s];
-    
-    // Reconstruct state
     let sTasks = [];
+    let sCounts = currentData.counts[s];
+
     if(l) { 
-        held.T90+=d90; held.T60+=d60; held.T30+=d30; held.T15+=d15; 
-        for(let k=0; k<d90; k++) sTasks.push({dur:90, val:RATES[90]});
-        for(let k=0; k<d60; k++) sTasks.push({dur:60, val:RATES[60]});
-        for(let k=0; k<d30; k++) sTasks.push({dur:30, val:RATES[30]});
-        for(let k=0; k<d15; k++) sTasks.push({dur:15, val:RATES[15]});
+        for(let i=0; i<4; i++) {
+            held[i] += sCounts[i];
+            for(let k=0; k<sCounts[i]; k++) {
+                sTasks.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
+            }
+        }
     }
     
-    const m = (d90*90)+(d60*60)+(d30*30)+(d15*15);
-    const r = (d90*RATES[90])+(d60*RATES[60])+(d30*RATES[30])+(d15*RATES[15]);
+    // Calc current totals
+    let m = 0; let r = 0;
+    sTasks.forEach(t => { m+=t.dur; r+=t.val; });
 
     states.push({ 
       id:s, locked:l, minutes:l?m:0, revenue:l?r:0, 
       tasks: sTasks,
-      counts:{ T90:l?d90:0, T60:l?d60:0, T30:l?d30:0, T15:l?d15:0 } 
+      counts: l ? [...sCounts] : [0,0,0,0]
     });
   }
 
-  for(let k in held) if(held[k] > ins[k]) { alert("Locked values exceed inputs"); return; }
+  for(let i=0; i<4; i++) {
+      if(held[i] > ins[i]) { alert("Locked values exceed inputs"); return; }
+  }
   
   let pool = [];
-  const addP = (k, dur, rate) => { for(let i=0; i<(ins[k]-held[k]); i++) pool.push({dur:dur, val:rate}); }
-  addP('T90',90, RATES[90]); addP('T60',60, RATES[60]); 
-  addP('T30',30, RATES[30]); addP('T15',15, RATES[15]);
+  for(let i=0; i<4; i++) {
+      const needed = ins[i] - held[i];
+      for(let k=0; k<needed; k++) {
+          pool.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
+      }
+  }
   
   if(pool.length) distribute(pool, states);
   
@@ -631,25 +667,27 @@ function recalculateUnlocked(){
 }
 
 function syncData(states) {
-  currentData = { T90:[], T60:[], T30:[], T15:[] };
+  currentData = { counts: [] };
   states.forEach(s => {
-      currentData.T90.push(s.counts.T90); currentData.T60.push(s.counts.T60);
-      currentData.T30.push(s.counts.T30); currentData.T15.push(s.counts.T15);
+      currentData.counts.push([...s.counts]);
   });
 }
 
 function renderGrid(){
   const grid = document.getElementById("resultsGrid");
   grid.innerHTML = "";
-  const RATES = getRates();
 
   for(let i=0; i<staffCount; i++){
     const c = staffColors[i % staffColors.length];
-    const d90=currentData.T90[i], d60=currentData.T60[i], d30=currentData.T30[i], d15=currentData.T15[i];
+    const myCounts = currentData.counts[i];
     
-    const totalMins = (d90*90)+(d60*60)+(d30*30)+(d15*15);
-    const totalRev = (d90*RATES[90])+(d60*RATES[60])+(d30*RATES[30])+(d15*RATES[15]);
-    
+    let totalMins = 0;
+    let totalRev = 0;
+    myCounts.forEach((cnt, idx) => {
+        totalMins += cnt * taskConfig[idx].min;
+        totalRev += cnt * taskConfig[idx].val;
+    });
+
     const hrs = totalMins/60;
     const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
     
@@ -665,9 +703,21 @@ function renderGrid(){
         heroHTML = `<span class="prefix">RM</span>${totalRev}`;
         subHTML = `${hrsTxt}h`;
     }
-    
-    const s90 = d90>0?"":"is-zero"; const s60 = d60>0?"":"is-zero";
-    const s30 = d30>0?"":"is-zero"; const s15 = d15>0?"":"is-zero";
+
+    // Build Task Rows Dynamically
+    let tasksHTML = "";
+    for(let k=0; k<4; k++) {
+        const cnt = myCounts[k];
+        const cssClass = cnt > 0 ? "" : "is-zero";
+        const label = `${taskConfig[k].min}m`;
+        
+        tasksHTML += `
+          <div class="task-row ${cssClass}">
+            <span class="task-label">${label}</span>
+            <input class="task-input" type="number" data-staff="${i}" data-idx="${k}" value="${cnt}" oninput="manualEdit(this)">
+          </div>
+        `;
+    }
 
     const cardHTML = `
       <div class="staff-card">
@@ -683,22 +733,7 @@ function renderGrid(){
           </div>
         </div>
         <div class="card-tasks">
-          <div class="task-row ${s90}">
-            <span class="task-label">90m</span>
-            <input class="task-input" type="number" data-staff="${i}" data-type="T90" value="${d90}" oninput="manualEdit(this)">
-          </div>
-          <div class="task-row ${s60}">
-            <span class="task-label">60m</span>
-            <input class="task-input" type="number" data-staff="${i}" data-type="T60" value="${d60}" oninput="manualEdit(this)">
-          </div>
-          <div class="task-row ${s30}">
-            <span class="task-label">30m</span>
-            <input class="task-input" type="number" data-staff="${i}" data-type="T30" value="${d30}" oninput="manualEdit(this)">
-          </div>
-          <div class="task-row ${s15}">
-            <span class="task-label">15m</span>
-            <input class="task-input" type="number" data-staff="${i}" data-type="T15" value="${d15}" oninput="manualEdit(this)">
-          </div>
+            ${tasksHTML}
         </div>
       </div>
     `;
@@ -708,16 +743,19 @@ function renderGrid(){
 
 function manualEdit(el){
   const staff = el.getAttribute('data-staff');
-  const type = el.getAttribute('data-type');
+  const idx = el.getAttribute('data-idx');
   let val = parseInt(el.value);
   if(isNaN(val)) val = 0;
   
-  currentData[type][staff] = val;
-  const RATES = getRates();
+  currentData.counts[staff][idx] = val;
   
-  const d90=currentData.T90[staff], d60=currentData.T60[staff], d30=currentData.T30[staff], d15=currentData.T15[staff];
-  const totalMins = (d90*90)+(d60*60)+(d30*30)+(d15*15);
-  const totalRev = (d90*RATES[90])+(d60*RATES[60])+(d30*RATES[30])+(d15*RATES[15]);
+  // Recalc totals for card update
+  let totalMins = 0; let totalRev = 0;
+  currentData.counts[staff].forEach((cnt, k) => {
+      totalMins += cnt * taskConfig[k].min;
+      totalRev += cnt * taskConfig[k].val;
+  });
+
   const hrs = totalMins/60;
   const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
   
@@ -740,7 +778,7 @@ function toggleLock(i){
 
 function resetAll(){
   document.getElementById("totalStaff").value = "";
-  ["tasks90","tasks60","tasks30","tasks15"].forEach(id=>document.getElementById(id).value="");
+  for(let i=0; i<4; i++) document.getElementById(`in_${i}`).value = "";
   updateStats();
   document.getElementById("resultsGrid").innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
   currentData = null; locked=[]; staffCount=0;
