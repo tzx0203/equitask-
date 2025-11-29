@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Workload Distributor</title>
+<title>Workload Manager Pro (Brute Force)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -287,7 +287,7 @@
 <div class="app-wrapper">
   
   <header>
-    <h1>Workload Manager</h1>
+    <h1>Workload Manager Pro</h1>
     <div class="header-controls">
       <button class="icon-btn active-time" onclick="toggleMode()" id="modeBtn" title="Switch Logic">
         <!-- Icon injected JS -->
@@ -434,7 +434,22 @@ function renderMode() {
 function toggleRates() { document.getElementById('ratesPanel').classList.toggle('open'); }
 function loadConfig() {
   const saved = localStorage.getItem('task_config');
-  if(saved) taskConfig = JSON.parse(saved);
+  if(saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Smart merge to prevent undefined names if local storage is partial
+      taskConfig = taskConfig.map((def, i) => {
+          const p = parsed[i] || {};
+          return {
+              name: p.name || def.name,
+              min: p.min !== undefined ? Number(p.min) : def.min,
+              val: p.val !== undefined ? Number(p.val) : def.val
+          };
+      });
+    } catch (e) {
+      console.error("Error loading config:", e);
+    }
+  }
   updateInputLabels();
 }
 function saveConfig() {
