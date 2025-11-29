@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Custom Balancer</title>
+<title>Workload Distributor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,6 +17,8 @@
     --input-bg: #f8fafc;
     --primary: #4f46e5;
     --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
     --mode-color: #64748b;
   }
   [data-theme="dark"] {
@@ -28,6 +30,8 @@
     --input-bg: #334155;
     --primary: #818cf8;
     --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
   }
 
   body.mode-revenue { --mode-color: #10b981; }
@@ -76,7 +80,6 @@
   }
   .mode-indicator svg { width: 14px; height: 14px; }
 
-  /* Rates Settings */
   .rates-toggle {
     display: flex; align-items: center; gap: 6px; cursor: pointer;
     font-size: 13px; font-weight: 600; color: var(--text-muted);
@@ -91,49 +94,85 @@
   }
   .rates-panel.open { display: flex; }
   
-  .rate-row { display: flex; gap: 10px; align-items: center; }
-  .rate-label { font-size: 12px; font-weight: 700; width: 50px; color: var(--text-muted); }
-  .rate-input-group { flex: 1; display: flex; gap: 8px; align-items: center; }
-  .rate-input-group span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
-  .rate-input { 
-    width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border); 
+  .rate-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .rate-name {
+    flex: 2; min-width: 120px;
+    padding: 6px; border-radius: 6px; border: 1px solid var(--border);
     font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--card-bg);
   }
-
-  /* Main Inputs */
-  .input-strip { display: flex; gap: 10px; flex-wrap: wrap; }
-  .input-group { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 70px; }
-  .input-group.full { flex: 100%; max-width: 100%; }
-  
-  .input-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; height: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .input-group input {
-    width: 100%; padding: 10px; text-align: center; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
-    font-size: 16px; font-weight: 600; transition: border 0.2s;
+  .rate-input-group { flex: 1; display: flex; gap: 4px; align-items: center; min-width: 80px; }
+  .rate-input-group span { font-size: 10px; color: var(--text-muted); font-weight: 700; }
+  .rate-input { 
+    width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border); 
+    font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--card-bg); text-align: center;
   }
-  .input-group input:focus { outline: none; border-color: var(--primary); background: var(--card-bg); }
+
+  /* Main Inputs Optimized */
+  .input-strip { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; /* 2 columns mobile */
+    gap: 12px; 
+    margin-bottom: 4px;
+  }
+  @media (min-width: 640px) {
+    .input-strip { grid-template-columns: repeat(5, 1fr); }
+  }
+
+  .input-group { display: flex; flex-direction: column; gap: 8px; }
+  .input-group.full { grid-column: 1 / -1; }
+  @media (min-width: 640px) {
+    .input-group.full { grid-column: auto; }
+  }
+  
+  .input-group label { 
+    font-size: 11px; font-weight: 700; color: var(--text-muted); 
+    text-transform: uppercase; letter-spacing: 0.5px; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+  }
+  
+  .input-group input {
+    width: 100%; padding: 12px; text-align: center; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
+    font-size: 16px; font-weight: 600; transition: all 0.2s;
+    appearance: none; -moz-appearance: textfield;
+  }
+  /* Remove spinners */
+  .input-group input::-webkit-outer-spin-button, 
+  .input-group input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  
+  .input-group input:focus { 
+    outline: none; border-color: var(--primary); background: var(--card-bg);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); 
+  }
 
   .action-strip {
-    display: flex; justify-content: space-between; align-items: center;
-    padding-top: 12px; border-top: 1px solid var(--border); gap: 12px;
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    padding-top: 16px; border-top: 1px solid var(--border); gap: 16px;
   }
-  .stats-area { display: flex; gap: 8px; }
+  .stats-area { display: flex; gap: 8px; flex-wrap: wrap; flex: 1 1 auto; }
   .stat-pill {
     font-size: 13px; background: var(--input-bg); padding: 6px 10px;
     border-radius: 6px; color: var(--text-muted); border: 1px solid var(--border);
   }
   .stat-pill strong { color: var(--text-main); margin-left: 4px; }
   
-  .btn-area { display: flex; gap: 8px; }
+  .btn-area { display: flex; gap: 8px; flex-wrap: wrap; }
+  @media (max-width: 500px) {
+    .btn-area { width: 100%; }
+    .action-btn { flex: 1; display: flex; justify-content: center; }
+  }
+
   button.action-btn {
     cursor: pointer; font-size: 13px; font-weight: 600; padding: 10px 16px;
-    border-radius: 8px; border: none; transition: opacity 0.2s;
+    border-radius: 8px; border: none; transition: opacity 0.2s; white-space: nowrap;
   }
   .btn-reset { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-save { background: var(--text-main); color: var(--bg-body); border: 1px solid var(--text-main); }
+  .btn-save:disabled { opacity: 0.7; cursor: wait; }
   .btn-go { background: var(--primary); color: white; }
   .btn-recalc { background: var(--success); color: white; }
 
-  /* --- CARD GRID --- */
+  /* --- RESULTS --- */
   .results-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -168,40 +207,78 @@
   .lock-btn.locked svg { fill: currentColor; }
 
   .card-hero { padding: 4px 12px 16px 12px; text-align: left; }
-  
   .hero-main { font-size: 32px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1; }
   .hero-main span { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-left: 2px; vertical-align: baseline; }
   .hero-main span.prefix { margin-right: 2px; margin-left: 0; vertical-align: middle; }
-
   .hero-sub { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
   .hero-sec { font-size: 13px; font-weight: 600; color: var(--text-muted); background: var(--input-bg); padding: 4px 8px; border-radius: 4px; }
 
-  .card-tasks {
-    padding: 12px;
-    background: var(--input-bg);
-    flex: 1; 
-    display: flex; flex-direction: column; gap: 8px;
-    border-top: 1px solid var(--border);
-  }
-
-  .task-row {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--card-bg); padding: 8px 10px; border-radius: 6px;
-    border: 1px solid var(--border);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-  }
-  
+  .card-tasks { padding: 12px; background: var(--input-bg); flex: 1; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
+  .task-row { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   .task-row.is-zero { display: none; }
-  
-  .task-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
-  
-  .task-input {
-    width: 40px; border: none; background: transparent;
-    text-align: right; font-size: 14px; font-weight: 700; color: var(--text-main);
-    padding: 0; outline: none;
-  }
-
+  .task-label { font-size: 12px; font-weight: 700; color: var(--text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 90px; }
+  .task-input { width: 40px; border: none; background: transparent; text-align: right; font-size: 14px; font-weight: 700; color: var(--text-main); padding: 0; outline: none; }
   .empty-state { text-align: center; width: 100%; color: var(--text-muted); padding: 40px; font-style: italic; grid-column: 1 / -1; }
+
+  /* --- HISTORY SECTION --- */
+  .history-section { margin-top: 30px; display: none; flex-direction: column; gap: 16px; }
+  .history-section.has-data { display: flex; }
+  
+  .history-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .history-title { font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
+  .btn-export { background: var(--success); color: white; border: none; font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+  .rec-card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+  }
+  
+  .rec-meta { 
+    display: flex; justify-content: space-between; align-items: center; 
+    border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  }
+  .rec-date { font-size: 13px; font-weight: 600; color: var(--text-main); }
+  .btn-del-rec { border: none; background: transparent; color: var(--danger); cursor: pointer; padding: 4px; margin-left: 8px; }
+
+  /* Rec Row & Labels */
+  .rec-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .rec-row-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .rec-row-label svg { width: 16px; height: 16px; min-width: 16px; }
+  .rec-row-label.lbl-time { color: #3b82f6; }
+  .rec-row-label.lbl-rev { color: var(--success); }
+
+  .var-area { display: flex; gap: 6px; }
+  .var-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; }
+  .var-badge.ok { background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: rgba(16, 185, 129, 0.2); }
+  .var-badge.warn { background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.2); }
+  .var-badge.bad { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.2); }
+
+  /* Detailed Staff Grid inside History */
+  .rec-staff-grid {
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
+    gap: 8px;
+  }
+  
+  .rec-staff-item {
+    background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  
+  .rsi-name { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+  .rsi-stats { display: flex; justify-content: space-between; align-items: center; }
+  .rsi-money { font-size: 13px; font-weight: 700; color: var(--success); }
+  .rsi-time { font-size: 13px; font-weight: 700; color: var(--text-main); }
+  
+  .rsi-tasks { 
+    font-size: 10px; color: var(--text-muted); margin-top: 4px; 
+    border-top: 1px solid var(--border); padding-top: 4px; line-height: 1.4;
+  }
 
 </style>
 </head>
@@ -210,7 +287,7 @@
 <div class="app-wrapper">
   
   <header>
-    <h1>Workload Balancer</h1>
+    <h1>Workload Manager</h1>
     <div class="header-controls">
       <button class="icon-btn active-time" onclick="toggleMode()" id="modeBtn" title="Switch Logic">
         <!-- Icon injected JS -->
@@ -221,98 +298,91 @@
     </div>
   </header>
 
+  <!-- Config -->
   <div class="config-container">
-    
-    <div class="mode-indicator" id="modeLabel">
-      <!-- Icon Injected by JS -->
-      Prioritizing: HOURS
-    </div>
+    <div class="mode-indicator" id="modeLabel">Prioritizing: HOURS</div>
 
-    <!-- Rates Toggle -->
     <button class="rates-toggle" onclick="toggleRates()">
       <span>Edit Tasks Types</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     
-    <!-- Dynamic Rates Panel -->
     <div id="ratesPanel" class="rates-panel">
-      <!-- Generated by JS -->
+      <!-- Rates JS -->
     </div>
 
-    <!-- Main Inputs -->
     <div class="input-strip">
       <div class="input-group full">
         <label>Team Size</label>
         <input id="totalStaff" type="number" min="1" placeholder="e.g. 4" inputmode="numeric">
       </div>
-      
-      <!-- Dynamic Inputs -->
-      <div class="input-group">
-        <label id="lbl_0">Task 1</label>
-        <input id="in_0" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="input-group">
-        <label id="lbl_1">Task 2</label>
-        <input id="in_1" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="input-group">
-        <label id="lbl_2">Task 3</label>
-        <input id="in_2" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="input-group">
-        <label id="lbl_3">Task 4</label>
-        <input id="in_3" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-
+      <div class="input-group"><label id="lbl_0">Task 1</label><input id="in_0" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl_1">Task 2</label><input id="in_1" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl_2">Task 3</label><input id="in_2" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl_3">Task 4</label><input id="in_3" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
     </div>
 
     <div class="action-strip">
       <div class="stats-area">
-        <div class="stat-pill">Total: <strong id="valCount">0</strong></div>
+        <div class="stat-pill">Orders: <strong id="valCount">0</strong></div>
         <div class="stat-pill">Time: <strong id="valHours">0h</strong></div>
+        <div class="stat-pill">Time Var: <strong id="valTimeVar">-</strong></div>
+        <div class="stat-pill">Rev Var: <strong id="valRevVar">-</strong></div>
       </div>
       <div class="btn-area">
         <button class="action-btn btn-reset" onclick="resetAll()">Reset</button>
+        <button class="action-btn btn-save" onclick="saveDualRecord()">Save</button>
         <button id="calcBtn" class="action-btn btn-go" onclick="initialCalculate()">Distribute</button>
         <button id="recalcBtn" class="action-btn btn-recalc" onclick="recalculateUnlocked()" style="display:none;">Recalc</button>
       </div>
     </div>
   </div>
 
+  <!-- Results -->
   <div id="resultsGrid" class="results-grid">
     <div class="empty-state">Enter inputs to distribute workload...</div>
+  </div>
+
+  <!-- History -->
+  <div id="historySection" class="history-section">
+    <div class="history-header-row">
+      <div class="history-title">Saved Records</div>
+      <button class="btn-export" onclick="exportToCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Export CSV
+      </button>
+    </div>
+    <div id="historyList" style="display:flex; flex-direction:column; gap:12px;"></div>
   </div>
 
 </div>
 
 <script>
-/* --- ICONS --- */
+/* --- CONSTANTS & STATE --- */
 const icons = {
   moon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
   sun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
   lockOpen: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`,
   lockClosed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
   time: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
-  cash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>`
+  cash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>`,
+  trash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`
 };
-
 const staffColors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#f43f5e", "#06b6d4"];
 
-/* --- STATE --- */
 const toInt = v => { const n = parseInt(v); return isNaN(n)?0:n; }
 const inputVal = id => toInt(document.getElementById(id).value);
 
 let currentData = null; 
 let locked = []; 
 let staffCount = 0;
-let distMode = 'time'; // 'time' or 'revenue'
+let distMode = 'time'; 
 
-// CONFIG: 4 Slots. Each has { min, val }
 let taskConfig = [
-  { min: 90, val: 300 },
-  { min: 60, val: 250 },
-  { min: 30, val: 130 },
-  { min: 15, val: 70 }
+  { name: "90m", min: 90, val: 305 },
+  { name: "60m Package", min: 60, val: 120 },
+  { name: "60m Private", min: 60, val: 205 },
+  { name: "15m", min: 15, val: 70 }
 ];
 
 /* --- INIT --- */
@@ -321,9 +391,10 @@ function initUI() {
   renderRatesPanel();
   renderTheme();
   renderMode();
+  loadHistory();
 }
 
-/* --- THEME --- */
+/* --- THEME/MODE/RATES --- */
 function toggleTheme() {
   const c = document.documentElement.getAttribute('data-theme');
   const n = c === 'dark' ? 'light' : 'dark';
@@ -337,7 +408,6 @@ function renderTheme() {
   document.getElementById('themeBtn').innerHTML = t === 'dark' ? icons.sun : icons.moon;
 }
 
-/* --- MODE --- */
 function toggleMode() {
   distMode = distMode === 'time' ? 'revenue' : 'time';
   renderMode();
@@ -350,431 +420,432 @@ function renderMode() {
   const btn = document.getElementById('modeBtn');
   const lbl = document.getElementById('modeLabel');
   const body = document.body;
-
   body.classList.remove('mode-time', 'mode-revenue');
   body.classList.add(`mode-${distMode}`);
-
   if (distMode === 'time') {
-    btn.innerHTML = icons.time;
-    btn.classList.add('active-time');
-    btn.classList.remove('active-rev');
+    btn.innerHTML = icons.time; btn.classList.add('active-time'); btn.classList.remove('active-rev');
     lbl.innerHTML = `${icons.time} Prioritizing: HOURS`;
   } else {
-    btn.innerHTML = icons.cash;
-    btn.classList.add('active-rev');
-    btn.classList.remove('active-time');
+    btn.innerHTML = icons.cash; btn.classList.add('active-rev'); btn.classList.remove('active-time');
     lbl.innerHTML = `${icons.cash} Prioritizing: REVENUE`;
   }
 }
 
-/* --- DYNAMIC CONFIG --- */
-function toggleRates() {
-  document.getElementById('ratesPanel').classList.toggle('open');
-}
-
+function toggleRates() { document.getElementById('ratesPanel').classList.toggle('open'); }
 function loadConfig() {
   const saved = localStorage.getItem('task_config');
   if(saved) taskConfig = JSON.parse(saved);
   updateInputLabels();
 }
-
 function saveConfig() {
-  // Read inputs from Rates Panel
   for(let i=0; i<4; i++) {
+    taskConfig[i].name = document.getElementById(`cfg_name_${i}`).value || `Task ${i+1}`;
     taskConfig[i].min = toInt(document.getElementById(`cfg_min_${i}`).value);
     taskConfig[i].val = toInt(document.getElementById(`cfg_val_${i}`).value);
   }
   localStorage.setItem('task_config', JSON.stringify(taskConfig));
-  updateInputLabels();
-  updateStats();
+  updateInputLabels(); updateStats();
   if (currentData) renderGrid();
 }
-
 function renderRatesPanel() {
-  const container = document.getElementById('ratesPanel');
-  container.innerHTML = '';
-  
+  const container = document.getElementById('ratesPanel'); container.innerHTML = '';
   taskConfig.forEach((cfg, i) => {
-    const row = `
+    container.innerHTML += `
       <div class="rate-row">
-        <div class="rate-label">Task ${i+1}</div>
-        <div class="rate-input-group">
-           <input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()">
-           <span>m</span>
-        </div>
-        <div class="rate-input-group">
-           <input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()">
-           <span>RM</span>
-        </div>
-      </div>
-    `;
-    container.innerHTML += row;
+        <input class="rate-name" type="text" id="cfg_name_${i}" value="${cfg.name}" placeholder="Task Name" oninput="saveConfig()">
+        <div class="rate-input-group"><input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()"><span>m</span></div>
+        <div class="rate-input-group"><input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()"><span>RM</span></div>
+      </div>`;
   });
 }
-
 function updateInputLabels() {
-  taskConfig.forEach((cfg, i) => {
-    document.getElementById(`lbl_${i}`).innerText = `${cfg.min}m (${cfg.val})`;
-  });
+  taskConfig.forEach((cfg, i) => { document.getElementById(`lbl_${i}`).innerText = `${cfg.name} (${cfg.val})`; });
 }
-
-
-/* --- CALCULATIONS --- */
 function updateStats(){
-  let count = 0;
-  let hrs = 0;
-  
-  for(let i=0; i<4; i++) {
-    const qty = inputVal(`in_${i}`);
-    count += qty;
-    hrs += (qty * taskConfig[i].min);
-  }
+  let count = 0; let hrs = 0;
+  for(let i=0; i<4; i++) { const qty = inputVal(`in_${i}`); count += qty; hrs += (qty * taskConfig[i].min); }
   hrs = hrs / 60;
-  
   document.getElementById("valCount").innerText = count;
   document.getElementById("valHours").innerText = (Number.isInteger(hrs)?hrs:hrs.toFixed(1))+"h";
 }
 
-/* --- DISTRIBUTION LOGIC --- */
-function distribute(tasks, staffStates) {
-    // 1. Initial Sort
-    tasks.sort((a, b) => {
-      if (distMode === 'time') {
-        return b.dur - a.dur;
-      } else {
-        if (b.val !== a.val) return b.val - a.val;
-        return b.dur - a.dur;
-      }
-    });
+/* --- OPTIMIZED SOLVER ENGINE --- */
 
-    // 2. Greedy Assignment
-    tasks.forEach(task => {
-        let bestIdx = -1;
-        let minPrimary = Infinity;
-        let minSecondary = Infinity;
+// Combinatorics helper
+function getCompositions(n, k) {
+    if (k === 1) return [[n]];
+    if (k <= 0 || n < 0) return [];
+    let results = [];
+    for (let i = 0; i <= n; i++) {
+        let rest = getCompositions(n - i, k - 1);
+        for (let r of rest) results.push([i, ...r]);
+    }
+    return results;
+}
 
-        for (let i=0; i<staffStates.length; i++) {
-            if (staffStates[i].locked) continue;
-            
-            const sRev = staffStates[i].revenue;
-            const sTime = staffStates[i].minutes;
-            
-            const currentPrimary = distMode === 'time' ? sTime : sRev;
-            const currentSecondary = distMode === 'time' ? 0 : sTime;
+// Calculate complexity
+function calcComplexity(n, k) {
+    if (k <= 0) return 1;
+    let top = 1; let bot = 1;
+    for(let i=0; i<k-1; i++) { top *= (n+k-1-i); bot *= (i+1); }
+    return Math.round(top/bot);
+}
 
-            if (currentPrimary < minPrimary) {
-                minPrimary = currentPrimary;
-                minSecondary = currentSecondary;
-                bestIdx = i;
-            } else if (currentPrimary === minPrimary) {
-                if (distMode === 'revenue' && currentSecondary < minSecondary) {
-                    minSecondary = currentSecondary;
-                    bestIdx = i;
-                } else if (distMode === 'time') {
-                   bestIdx = i; 
-                }
+// THE UNIFIED BRAIN (Used by both Distribute and Save)
+function findBestDistribution(sCount, ins, targetMode) {
+    // 1. Check complexity
+    let complexity = 1;
+    for(let i=0; i<4; i++) if (ins[i] > 0) complexity *= calcComplexity(ins[i], sCount);
+    
+    // STRATEGY 1: BRUTE FORCE (If manageable)
+    if (complexity < 5000000) {
+        let dists = [];
+        for(let i=0; i<4; i++) dists.push(getCompositions(ins[i], sCount));
+        
+        let bestState = null;
+        let bestMetric = { diff1: Infinity, diff2: Infinity }; // diff1 = target, diff2 = secondary
+
+        // Iterate combinations
+        for (let d0 of dists[0]) {
+          for (let d1 of dists[1]) {
+            for (let d2 of dists[2]) {
+              for (let d3 of dists[3]) {
+                  // Totals
+                  let mins = new Array(sCount).fill(0);
+                  let revs = new Array(sCount).fill(0);
+                  for(let s=0; s<sCount; s++) {
+                      mins[s] += d0[s]*taskConfig[0].min + d1[s]*taskConfig[1].min + d2[s]*taskConfig[2].min + d3[s]*taskConfig[3].min;
+                      revs[s] += d0[s]*taskConfig[0].val + d1[s]*taskConfig[1].val + d2[s]*taskConfig[2].val + d3[s]*taskConfig[3].val;
+                  }
+
+                  let diffT = Math.max(...mins) - Math.min(...mins);
+                  let diffR = Math.max(...revs) - Math.min(...revs);
+                  
+                  let dPrimary = targetMode === 'time' ? diffT : diffR;
+                  let dSecondary = targetMode === 'time' ? diffR : diffT;
+
+                  // BUG FIX: Added `bestState === null` check to ensure it's initialized on the first iteration, preventing a null reference crash.
+                  if (bestState === null || dPrimary < bestMetric.diff1 || (dPrimary === bestMetric.diff1 && dSecondary < bestMetric.diff2)) {
+                      bestMetric = { diff1: dPrimary, diff2: dSecondary };
+                      bestState = [d0, d1, d2, d3];
+                  }
+              }
+            }
+          }
+        }
+
+        if (!bestState) { // Should not happen with the fix above, but as a safe guard.
+             console.error("Brute-force algorithm failed to find a distribution.");
+             // Return a zeroed-out result to prevent crashing the app.
+             bestState = [new Array(sCount).fill(0), new Array(sCount).fill(0), new Array(sCount).fill(0), new Array(sCount).fill(0)];
+        }
+        
+        // Format Result
+        let result = [];
+        for(let s=0; s<sCount; s++) {
+            let counts = [bestState[0][s], bestState[1][s], bestState[2][s], bestState[3][s]];
+            let m=0, r=0;
+            counts.forEach((c, i) => { m += c*taskConfig[i].min; r += c*taskConfig[i].val; });
+            result.push({ id: s, counts, revenue: r, minutes: m });
+        }
+        return result;
+
+    } else {
+        // STRATEGY 2: MONTE CARLO (Fallback)
+        let flatTasks = [];
+        for(let i=0; i<4; i++) {
+           for(let k=0; k<ins[i]; k++) flatTasks.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
+        }
+
+        let bestState = null;
+        let bestDiff = Infinity;
+        
+        for(let i=0; i<80000; i++) { // Increased iterations
+            // Shuffle
+            for (let j = flatTasks.length - 1; j > 0; j--) {
+                const k = Math.floor(Math.random() * (j + 1));
+                [flatTasks[j], flatTasks[k]] = [flatTasks[k], flatTasks[j]];
+            }
+            // Distribute
+            let temp = Array(sCount).fill(0).map((_, idx) => ({ id: idx, minutes: 0, revenue: 0, counts: [0,0,0,0] }));
+            for(let j=0; j<flatTasks.length; j++) {
+                let t = flatTasks[j];
+                let sIdx = j % sCount;
+                temp[sIdx].minutes += t.dur;
+                temp[sIdx].revenue += t.val;
+                temp[sIdx].counts[t.typeIdx]++;
+            }
+            // Evaluate
+            let vals = temp.map(s => targetMode === 'time' ? s.minutes : s.revenue);
+            let diff = Math.max(...vals) - Math.min(...vals);
+            if (diff < bestDiff) {
+                bestDiff = diff;
+                bestState = JSON.parse(JSON.stringify(temp));
             }
         }
-
-        if (bestIdx !== -1) {
-            assignTask(staffStates[bestIdx], task);
-        }
-    });
-
-    // 3. OPTIMIZATION PASS
-    optimizeDistribution(staffStates);
-}
-
-function assignTask(staff, task) {
-    staff.minutes += task.dur;
-    staff.revenue += task.val;
-    staff.tasks.push(task); 
-    staff.counts[task.typeIdx]++;
-}
-
-function removeTask(staff, taskIndex) {
-    const task = staff.tasks[taskIndex];
-    staff.minutes -= task.dur;
-    staff.revenue -= task.val;
-    staff.tasks.splice(taskIndex, 1);
-    staff.counts[task.typeIdx]--;
-    return task;
-}
-
-function optimizeDistribution(staffStates) {
-    const activeStaff = staffStates.filter(s => !s.locked);
-    if (activeStaff.length < 2) return;
-
-    let improved = true;
-    let limit = 2000; 
-
-    while (improved && limit > 0) {
-        improved = false;
-        limit--;
-
-        let metrics = activeStaff.map(getMetric);
-        let globalMin = Math.min(...metrics);
-        let globalMax = Math.max(...metrics);
-        let currentRange = globalMax - globalMin;
-
-        if (currentRange === 0) break; 
-
-        // Check All vs All Pairs
-        for (let i = 0; i < activeStaff.length; i++) {
-            for (let j = 0; j < activeStaff.length; j++) {
-                if (i === j) continue;
-
-                let s1 = activeStaff[i];
-                let s2 = activeStaff[j];
-
-                // TRY SWAP
-                for (let t1 = 0; t1 < s1.tasks.length; t1++) {
-                    for (let t2 = 0; t2 < s2.tasks.length; t2++) {
-                        
-                        let task1 = s1.tasks[t1];
-                        let task2 = s2.tasks[t2];
-                        let val1 = getVal(task1);
-                        let val2 = getVal(task2);
-
-                        if (val1 === val2) continue;
-
-                        let s1New = getMetric(s1) - val1 + val2;
-                        let s2New = getMetric(s2) - val2 + val1;
-
-                        let newMetrics = [...metrics];
-                        newMetrics[i] = s1New;
-                        newMetrics[j] = s2New;
-                        
-                        let newMax = Math.max(...newMetrics);
-                        let newMin = Math.min(...newMetrics);
-                        let newRange = newMax - newMin;
-
-                        if (newRange < currentRange) {
-                            removeTask(s1, t1);
-                            removeTask(s2, t2);
-                            assignTask(s1, task2);
-                            assignTask(s2, task1);
-                            improved = true;
-                            metrics[i] = s1New; 
-                            metrics[j] = s2New;
-                            currentRange = newRange;
-                            break; 
-                        }
-                    }
-                    if (improved) break;
-                }
-                if (improved) break;
-            }
-            if (improved) break;
-        }
+        return bestState;
     }
 }
 
-function getMetric(staff) {
-    return distMode === 'time' ? staff.minutes : staff.revenue;
-}
-function getVal(task) {
-    return distMode === 'time' ? task.dur : task.val;
+function saveDualRecord() {
+  const btn = document.querySelector('.btn-save');
+  const originalText = btn.innerText;
+  btn.innerText = "Computing...";
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const sCount = Math.max(1, inputVal("totalStaff"));
+      let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+      const totalTasks = ins.reduce((a,b)=>a+b,0);
+      if (sCount <= 0 || totalTasks === 0) { alert("Please enter inputs first."); return; }
+
+      // Use the optimized solver
+      const resTime = findBestDistribution(sCount, ins, 'time').map(s => ({id:s.id+1, counts:s.counts, rev:s.revenue, mins:s.minutes}));
+      const resRev = findBestDistribution(sCount, ins, 'revenue').map(s => ({id:s.id+1, counts:s.counts, rev:s.revenue, mins:s.minutes}));
+
+      const record = {
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        staffCount: sCount,
+        config: JSON.parse(JSON.stringify(taskConfig)), 
+        resTime: resTime,
+        resRev: resRev
+      };
+
+      const history = JSON.parse(localStorage.getItem('workload_history') || '[]');
+      history.unshift(record);
+      localStorage.setItem('workload_history', JSON.stringify(history));
+      
+      loadHistory();
+      alert(`Saved!`);
+    } catch (e) {
+      console.error("Error during save operation:", e);
+      alert("An error occurred while saving: " + e.message);
+    } finally {
+      btn.innerText = originalText;
+      btn.disabled = false;
+    }
+  }, 100);
 }
 
+/* --- UI ACTIONS --- */
 
+// Updated to use the smart solver
 function initialCalculate(){
   staffCount = Math.max(1, inputVal("totalStaff"));
+  let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+  const totalTasks = ins.reduce((a,b)=>a+b,0);
   
-  // Build Pool based on Config
-  let pool = [];
-  let totalTasks = 0;
-  for(let i=0; i<4; i++) {
-    const qty = inputVal(`in_${i}`);
-    totalTasks += qty;
-    for(let k=0; k<qty; k++) {
-        pool.push({ 
-            dur: taskConfig[i].min, 
-            val: taskConfig[i].val, 
-            typeIdx: i 
-        });
-    }
-  }
-
   if(staffCount<=0 || totalTasks===0) { alert("Please check inputs"); return; }
-
-  let states=[];
-  for(let i=0;i<staffCount;i++) states.push({
-    id:i, locked:false, minutes:0, revenue:0,
-    tasks: [],
-    counts: [0,0,0,0] // Track counts for config indices 0-3
-  });
-
-  distribute(pool, states);
   
-  syncData(states);
-  locked = new Array(staffCount).fill(false);
-  renderGrid();
-  document.getElementById("recalcBtn").style.display = "none";
+  try {
+    // Call the Smart Brain
+    const bestResult = findBestDistribution(staffCount, ins, distMode);
+    
+    // Map result to currentData
+    currentData = { counts: [] };
+    bestResult.forEach(s => { currentData.counts.push([...s.counts]); });
+    
+    locked = new Array(staffCount).fill(false);
+    renderGrid(); 
+    document.getElementById("recalcBtn").style.display = "none";
+  } catch (e) {
+    console.error("Error during calculation:", e);
+    alert("An error occurred during calculation. Please check the inputs or console for more details.");
+  }
 }
 
+// "Recalculate Unlocked" still uses a simpler greedy approach because 
+// brute-forcing with partial locks is extremely complex.
 function recalculateUnlocked(){
   if (!currentData) return;
+  let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+  let held = [0,0,0,0]; let states = [];
   
-  // Read inputs
-  let ins = [];
-  for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
-
-  let held = [0,0,0,0];
-  let states = [];
-
+  // Rebuild states from current locks
   for (let s=0; s<staffCount; s++){
-    const l = locked[s];
-    let sTasks = [];
-    let sCounts = currentData.counts[s];
-
+    const l = locked[s]; let sTasks = []; let sCounts = currentData.counts[s];
     if(l) { 
         for(let i=0; i<4; i++) {
             held[i] += sCounts[i];
-            for(let k=0; k<sCounts[i]; k++) {
-                sTasks.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
-            }
+            for(let k=0; k<sCounts[i]; k++) sTasks.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
         }
     }
-    
-    // Calc current totals
-    let m = 0; let r = 0;
-    sTasks.forEach(t => { m+=t.dur; r+=t.val; });
-
-    states.push({ 
-      id:s, locked:l, minutes:l?m:0, revenue:l?r:0, 
-      tasks: sTasks,
-      counts: l ? [...sCounts] : [0,0,0,0]
-    });
+    let m = 0; let r = 0; sTasks.forEach(t => { m+=t.dur; r+=t.val; });
+    states.push({ id:s, locked:l, minutes:l?m:0, revenue:l?r:0, tasks: sTasks, counts: l ? [...sCounts] : [0,0,0,0] });
   }
-
-  for(let i=0; i<4; i++) {
-      if(held[i] > ins[i]) { alert("Locked values exceed inputs"); return; }
-  }
+  for(let i=0; i<4; i++) if(held[i] > ins[i]) { alert("Locked values exceed inputs"); return; }
   
   let pool = [];
   for(let i=0; i<4; i++) {
       const needed = ins[i] - held[i];
-      for(let k=0; k<needed; k++) {
-          pool.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
-      }
+      for(let k=0; k<needed; k++) pool.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
   }
   
-  if(pool.length) distribute(pool, states);
+  if(pool.length) {
+      // GREEDY DISTRIBUTION (Backup for partial updates)
+      pool.sort((a, b) => {
+          if (distMode === 'time') return b.dur - a.dur;
+          else {
+              if (b.val !== a.val) return b.val - a.val;
+              return b.dur - a.dur;
+          }
+      });
+      pool.forEach(task => {
+        let bestIdx = -1; let minPrimary = Infinity; let minSecondary = Infinity;
+        for (let i=0; i<states.length; i++) {
+            if (states[i].locked) continue;
+            const sRev = states[i].revenue; const sTime = states[i].minutes;
+            const cPri = distMode === 'time' ? sTime : sRev;
+            const cSec = distMode === 'time' ? 0 : sTime;
+            if (cPri < minPrimary) { minPrimary = cPri; minSecondary = cSec; bestIdx = i; } 
+            else if (cPri === minPrimary) {
+                if (distMode === 'revenue' && cSec < minSecondary) { minSecondary = cSec; bestIdx = i; } 
+                else if (distMode === 'time') { bestIdx = i; }
+            }
+        }
+        if (bestIdx !== -1) {
+            states[bestIdx].minutes += task.dur; states[bestIdx].revenue += task.val;
+            states[bestIdx].tasks.push(task); states[bestIdx].counts[task.typeIdx]++;
+        }
+      });
+  }
   
-  syncData(states);
-  renderGrid();
+  syncData(states); renderGrid();
 }
 
-function syncData(states) {
-  currentData = { counts: [] };
-  states.forEach(s => {
-      currentData.counts.push([...s.counts]);
+function syncData(states) { currentData = { counts: [] }; states.forEach(s => { currentData.counts.push([...s.counts]); }); }
+
+/* --- RENDERING --- */
+function getStatsBadges(data) {
+    if (!data || data.length === 0) return '';
+    const mins = data.map(s => s.mins);
+    const minT = Math.min(...mins); const maxT = Math.max(...mins);
+    let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
+    let tBadge = parseFloat(tVar) < 10 ? `<span class="var-badge ok">Time: ${tVar}% ✅</span>` : `<span class="var-badge bad">Time: ${tVar}% ❌</span>`;
+
+    const revs = data.map(s => s.rev);
+    const minRev = Math.min(...revs); const maxRev = Math.max(...revs);
+    let revVar = minRev > 0 ? (((maxRev - minRev) / minRev) * 100).toFixed(1) : "0.0";
+    let rBadge = parseFloat(revVar) < 10 ? `<span class="var-badge ok">Rev: ${revVar}% ✅</span>` : `<span class="var-badge bad">Rev: ${revVar}% ❌</span>`;
+
+    return `<div class="var-area">${tBadge}${rBadge}</div>`;
+}
+
+function loadHistory() {
+  const history = JSON.parse(localStorage.getItem('workload_history') || '[]');
+  const container = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  if (history.length === 0) { container.classList.remove('has-data'); return; }
+  container.classList.add('has-data');
+  list.innerHTML = '';
+
+  const renderStaffGrid = (staffData, cfg) => {
+      let html = '';
+      if (!staffData) return '';
+      staffData.forEach((staff, idx) => {
+          const color = staffColors[idx % staffColors.length];
+          const hrs = (staff.mins / 60).toFixed(1);
+          let breakdown = [];
+          staff.counts.forEach((c, i) => { if(c > 0) breakdown.push(`${cfg[i]?.name || 'Task'}:<b>${c}</b>`); });
+          html += `<div class="rec-staff-item"><div class="rsi-name" style="color:${color}">Staff ${staff.id}</div><div class="rsi-stats"><div class="rsi-money">RM ${staff.rev}</div><div class="rsi-time">${hrs}h</div></div><div class="rsi-tasks">${breakdown.join(' &bull; ')}</div></div>`;
+      });
+      return html;
+  };
+
+  history.forEach(rec => {
+    list.innerHTML += `<div class="rec-card"><div class="rec-meta"><span class="rec-date">${rec.date}</span><button class="btn-del-rec" onclick="deleteRecord(${rec.id})">${icons.trash}</button></div><div><div class="rec-row-header"><div class="rec-row-label lbl-time">${icons.time} Optimized for HOURS</div>${getStatsBadges(rec.resTime)}</div><div class="rec-staff-grid">${renderStaffGrid(rec.resTime, rec.config)}</div></div><div style="margin-top:12px; border-top:1px dashed var(--border); padding-top:12px;"><div class="rec-row-header"><div class="rec-row-label lbl-rev">${icons.cash} Optimized for REVENUE</div>${getStatsBadges(rec.resRev)}</div><div class="rec-staff-grid">${renderStaffGrid(rec.resRev, rec.config)}</div></div></div>`;
   });
 }
 
+function deleteRecord(id) {
+  if(!confirm("Delete this record?")) return;
+  let history = JSON.parse(localStorage.getItem('workload_history') || '[]');
+  history = history.filter(r => r.id !== id);
+  localStorage.setItem('workload_history', JSON.stringify(history));
+  loadHistory();
+}
+
+function exportToCSV() {
+  const history = JSON.parse(localStorage.getItem('workload_history') || '[]');
+  if (history.length === 0) { alert("No history to export."); return; }
+  let csvContent = "\uFEFF";
+  const header = [ "Record ID", "Date", "Scenario", "Time Var (%)", "Revenue Var (%)", "Staff Name", "Task 1", "Task 2", "Task 3", "Task 4", "Revenue", "Hours" ];
+  csvContent += header.join(",") + "\n";
+  history.forEach(rec => {
+    const getMeta = (d) => {
+        if (!d || d.length === 0) return { tVar: 'N/A', rVar: 'N/A' };
+        let m = d.map(s => s.mins); let r = d.map(s => s.rev);
+        let minT = Math.min(...m); let maxT = Math.max(...m); let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
+        let minR = Math.min(...r); let maxR = Math.max(...r); let rVar = minR > 0 ? (((maxR-minR)/minR)*100).toFixed(1) : "0.0";
+        return { tVar, rVar };
+    }
+    let tMeta = getMeta(rec.resTime);
+    if(rec.resTime) rec.resTime.forEach(staff => {
+      const row = [rec.id, `"${rec.date}"`, "Time Opt", tMeta.tVar, tMeta.rVar, `Staff ${staff.id}`, ...staff.counts, staff.rev, (staff.mins/60).toFixed(2)];
+      csvContent += row.join(",") + "\n";
+    });
+    let rMeta = getMeta(rec.resRev);
+    if(rec.resRev) rec.resRev.forEach(staff => {
+      const row = [rec.id, `"${rec.date}"`, "Revenue Opt", rMeta.tVar, rMeta.rVar, `Staff ${staff.id}`, ...staff.counts, staff.rev, (staff.mins/60).toFixed(2)];
+      csvContent += row.join(",") + "\n";
+    });
+  });
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `workload_history_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function renderGrid(){
-  const grid = document.getElementById("resultsGrid");
-  grid.innerHTML = "";
+  const grid = document.getElementById("resultsGrid"); grid.innerHTML = "";
+  if (!currentData || !currentData.counts) return;
+  let allMins = []; let allRevs = [];
+  currentData.counts.forEach((cnt, idx) => {
+      let m = 0; let r = 0;
+      cnt.forEach((c, k) => { m += c * taskConfig[k].min; r += c * taskConfig[k].val; });
+      allMins.push(m); allRevs.push(r);
+  });
+  
+  const minT = Math.min(...allMins); const maxT = Math.max(...allMins);
+  let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
+  let tBadge = parseFloat(tVar) < 10 ? "✅" : (parseFloat(tVar) < 20 ? "⚠️" : "❌");
+  document.getElementById("valTimeVar").innerHTML = `${tVar}% ${tBadge}`;
+
+  const minR = Math.min(...allRevs); const maxR = Math.max(...allRevs);
+  let rVar = minR > 0 ? (((maxR-minR)/minR)*100).toFixed(1) : "0.0";
+  let rBadge = parseFloat(rVar) < 10 ? "✅" : (parseFloat(rVar) < 20 ? "⚠️" : "❌");
+  document.getElementById("valRevVar").innerHTML = `${rVar}% ${rBadge}`;
 
   for(let i=0; i<staffCount; i++){
-    const c = staffColors[i % staffColors.length];
-    const myCounts = currentData.counts[i];
-    
-    let totalMins = 0;
-    let totalRev = 0;
-    myCounts.forEach((cnt, idx) => {
-        totalMins += cnt * taskConfig[idx].min;
-        totalRev += cnt * taskConfig[idx].val;
-    });
-
-    const hrs = totalMins/60;
-    const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
-    
-    const isLocked = locked[i];
-    const lockClass = isLocked ? "locked" : "";
-    const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
-    
+    const c = staffColors[i % staffColors.length]; const myCounts = currentData.counts[i];
+    let totalMins = 0; let totalRev = 0;
+    myCounts.forEach((cnt, idx) => { totalMins += cnt * taskConfig[idx].min; totalRev += cnt * taskConfig[idx].val; });
+    const hrs = totalMins/60; const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+    const isLocked = locked[i]; const lockClass = isLocked ? "locked" : ""; const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
     let heroHTML, subHTML;
-    if (distMode === 'time') {
-        heroHTML = `${hrsTxt}<span>h</span>`;
-        subHTML = ``; 
-    } else {
-        heroHTML = `<span class="prefix">RM</span>${totalRev}`;
-        subHTML = `${hrsTxt}h`;
-    }
-
-    // Build Task Rows Dynamically
+    if (distMode === 'time') { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = `RM ${totalRev}`; } 
+    else { heroHTML = `<span class="prefix">RM</span>${totalRev}`; subHTML = `${hrsTxt}h`; }
     let tasksHTML = "";
     for(let k=0; k<4; k++) {
-        const cnt = myCounts[k];
-        const cssClass = cnt > 0 ? "" : "is-zero";
-        const label = `${taskConfig[k].min}m`;
-        
-        tasksHTML += `
-          <div class="task-row ${cssClass}">
-            <span class="task-label">${label}</span>
-            <input class="task-input" type="number" data-staff="${i}" data-idx="${k}" value="${cnt}" oninput="manualEdit(this)">
-          </div>
-        `;
+        const cnt = myCounts[k]; const cssClass = cnt > 0 ? "" : "is-zero"; const label = taskConfig[k].name;
+        tasksHTML += `<div class="task-row ${cssClass}"><span class="task-label">${label}</span><input class="task-input" type="number" data-staff="${i}" data-idx="${k}" value="${cnt}" oninput="manualEdit(this)"></div>`;
     }
-
-    const cardHTML = `
-      <div class="staff-card">
-        <div class="card-border-top" style="background:${c}"></div>
-        <div class="card-header">
-          <div class="staff-name" style="color:${c}">Staff ${i+1}</div>
-          <button class="lock-btn ${lockClass}" onclick="toggleLock(${i})" aria-label="Lock Staff">${lockIcon}</button>
-        </div>
-        <div class="card-hero">
-          <div class="hero-main">${heroHTML}</div>
-          <div class="hero-sub">
-            <div class="hero-sec">${subHTML}</div>
-          </div>
-        </div>
-        <div class="card-tasks">
-            ${tasksHTML}
-        </div>
-      </div>
-    `;
-    grid.innerHTML += cardHTML;
+    grid.innerHTML += `<div class="staff-card"><div class="card-border-top" style="background:${c}"></div><div class="card-header"><div class="staff-name" style="color:${c}">Staff ${i+1}</div><button class="lock-btn ${lockClass}" onclick="toggleLock(${i})" aria-label="Lock Staff">${lockIcon}</button></div><div class="card-hero"><div class="hero-main">${heroHTML}</div><div class="hero-sub"><div class="hero-sec">${subHTML}</div></div></div><div class="card-tasks">${tasksHTML}</div></div>`;
   }
 }
 
 function manualEdit(el){
-  const staff = el.getAttribute('data-staff');
-  const idx = el.getAttribute('data-idx');
-  let val = parseInt(el.value);
-  if(isNaN(val)) val = 0;
-  
-  currentData.counts[staff][idx] = val;
-  
-  // Recalc totals for card update
-  let totalMins = 0; let totalRev = 0;
-  currentData.counts[staff].forEach((cnt, k) => {
-      totalMins += cnt * taskConfig[k].min;
-      totalRev += cnt * taskConfig[k].val;
-  });
-
-  const hrs = totalMins/60;
-  const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
-  
-  const card = el.closest('.staff-card');
-  if (distMode === 'time') {
-    card.querySelector('.hero-main').innerHTML = `${hrsTxt}<span>h</span>`;
-  } else {
-    card.querySelector('.hero-main').innerHTML = `<span class="prefix">RM</span>${totalRev}`;
-    card.querySelector('.hero-sec').innerHTML = `${hrsTxt}h`;
-  }
-  
-  if(val > 0) el.parentElement.classList.remove('is-zero');
-}
-
-function toggleLock(i){
-  locked[i] = !locked[i];
-  document.getElementById("recalcBtn").style.display = locked.some(x=>x) ? "inline-block" : "none";
+  const staff = el.getAttribute('data-staff'); const idx = el.getAttribute('data-idx'); let val = parseInt(el.value);
+  if(isNaN(val)) val = 0; currentData.counts[staff][idx] = val;
   renderGrid();
 }
+function toggleLock(i){ locked[i] = !locked[i]; document.getElementById("recalcBtn").style.display = locked.some(x=>x) ? "inline-block" : "none"; renderGrid(); }
 
 function resetAll(){
   document.getElementById("totalStaff").value = "";
@@ -783,9 +854,10 @@ function resetAll(){
   document.getElementById("resultsGrid").innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
   currentData = null; locked=[]; staffCount=0;
   document.getElementById("recalcBtn").style.display = "none";
+  document.getElementById("valTimeVar").innerHTML = "-";
+  document.getElementById("valRevVar").innerHTML = "-";
 }
 
-// Start
 initUI();
 </script>
 </body>
