@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Workload Manager Pro</title>
+<title>Workload Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -60,14 +60,22 @@
     background: var(--card-bg); border: 1px solid var(--border); 
     border-radius: 8px; cursor: pointer; color: var(--text-main);
     padding: 0; display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s; width: 36px; height: 36px;
+    transition: all 0.2s; height: 36px;
   }
   .icon-btn:hover { background: var(--border); }
   .icon-btn svg { width: 18px; height: 18px; }
-  #modeBtn { color: var(--mode-color); border-color: var(--mode-color); font-weight: 700; }
+  
+  /* Mode Button Specifics */
+  #modeBtn { 
+    color: var(--mode-color); border-color: var(--mode-color); font-weight: 800; 
+    width: auto; padding: 0 12px; gap: 8px; font-size: 11px; text-transform: uppercase;
+  }
   #modeBtn.active-rev { background: rgba(16, 185, 129, 0.1); }
   #modeBtn.active-time { background: rgba(59, 130, 246, 0.1); }
   #modeBtn.active-combined { background: rgba(139, 92, 246, 0.1); color: var(--combined-color); border-color: var(--combined-color); }
+
+  /* Other icon buttons remain square */
+  #themeBtn, .icon-btn[title="Settings"] { width: 36px; }
 
   /* --- CONFIG --- */
   .config-container {
@@ -385,7 +393,7 @@
       <div class="setting-label">Calculation Algorithm</div>
       <select id="algoSelect" class="select-box" onchange="updateStats()">
         <option value="auto">Auto (Smart Select)</option>
-        <option value="brute">Force Brute Force (Slow, Exact)</option>
+        <option value="brute" selected>Force Brute Force (Slow, Exact)</option>
         <option value="sim">Force Simulation (Fast, Approx)</option>
       </select>
     </div>
@@ -489,13 +497,16 @@ function renderMode() {
   body.classList.add(`mode-${distMode}`);
   
   if (distMode === 'time') {
-    btn.innerHTML = icons.time; btn.classList.add('active-time'); btn.classList.remove('active-rev', 'active-combined');
+    btn.innerHTML = `${icons.time} HOURS`; 
+    btn.classList.add('active-time'); btn.classList.remove('active-rev', 'active-combined');
     lbl.innerHTML = `${icons.time} Prioritizing: HOURS`;
   } else if (distMode === 'revenue') {
-    btn.innerHTML = icons.cash; btn.classList.add('active-rev'); btn.classList.remove('active-time', 'active-combined');
+    btn.innerHTML = `${icons.cash} REVENUE`; 
+    btn.classList.add('active-rev'); btn.classList.remove('active-time', 'active-combined');
     lbl.innerHTML = `${icons.cash} Prioritizing: REVENUE`;
   } else {
-    btn.innerHTML = icons.layers; btn.classList.add('active-combined'); btn.classList.remove('active-time', 'active-rev');
+    btn.innerHTML = `${icons.layers} COMBINED`; 
+    btn.classList.add('active-combined'); btn.classList.remove('active-time', 'active-rev');
     lbl.innerHTML = `${icons.layers} Prioritizing: COMBINED`;
   }
 }
