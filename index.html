@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -478,56 +477,74 @@
   </div>
 </div>
 
-<!-- WORKER SCRIPT: Embedded securely to prevent string issues -->
+<!-- WORKER SCRIPT: SMART PARALLEL SPLIT -->
 <script id="worker-code" type="javascript/worker">
   self.onmessage = function(e) {
     try {
         const { mode, staffCount, taskConfig, targetMode } = e.data;
-        const sCount = Number(staffCount); // Force Number
+        const sCount = Number(staffCount); 
         
-        // --- MODE 1: BRUTE FORCE (Exact) ---
+        // --- MODE 1: SMART BRUTE FORCE (Exact) ---
         if (mode === 'brute') {
-          const { chunkD0, allD1, allD2, allD3 } = e.data;
+          const { chunks, splitIdx, staticComps } = e.data; 
+          
           let bestState = null;
           let bestMetric = { diff1: Infinity, diff2: Infinity };
           
-          const total = chunkD0.length * allD1.length * allD2.length * allD3.length;
+          let d0, d1, d2, d3;
+          
+          // Reconstruct nested loops dynamically based on which index was split
+          const assign = () => {
+             let staticPtr = 0;
+             d0 = (splitIdx === 0) ? chunks : staticComps[staticPtr++];
+             d1 = (splitIdx === 1) ? chunks : staticComps[staticPtr++];
+             d2 = (splitIdx === 2) ? chunks : staticComps[staticPtr++];
+             d3 = (splitIdx === 3) ? chunks : staticComps[staticPtr++];
+          }
+          assign();
+
+          const total = d0.length * d1.length * d2.length * d3.length;
           let processed = 0;
           const reportInterval = Math.max(1000, Math.floor(total / 20));
 
-          for (let d0 of chunkD0) {
-            for (let d1 of allD1) {
-              for (let d2 of allD2) {
-                for (let d3 of allD3) {
+          const m0=taskConfig[0].min, v0=taskConfig[0].val;
+          const m1=taskConfig[1].min, v1=taskConfig[1].val;
+          const m2=taskConfig[2].min, v2=taskConfig[2].val;
+          const m3=taskConfig[3].min, v3=taskConfig[3].val;
+
+          // Optimization: Pre-allocate typed arrays for calculations
+          let mins = new Float32Array(sCount);
+          let revs = new Float32Array(sCount);
+
+          for (let i0=0; i0<d0.length; i0++) {
+            const r0 = d0[i0];
+            for (let i1=0; i1<d1.length; i1++) {
+              const r1 = d1[i1];
+              for (let i2=0; i2<d2.length; i2++) {
+                const r2 = d2[i2];
+                for (let i3=0; i3<d3.length; i3++) {
+                  const r3 = d3[i3];
                   
-                  // Use Float32 for speed and to avoid string concat issues
-                  let mins = new Float32Array(sCount);
-                  let revs = new Float32Array(sCount);
-                  
+                  // Reset
+                  // for(let k=0; k<sCount; k++) { mins[k]=0; revs[k]=0; } // Not needed as we overwrite
+
                   for(let s=0; s<sCount; s++) {
-                      // d0[s] is the count assigned to staff 's'
-                      mins[s] = d0[s]*taskConfig[0].min + d1[s]*taskConfig[1].min + d2[s]*taskConfig[2].min + d3[s]*taskConfig[3].min;
-                      revs[s] = d0[s]*taskConfig[0].val + d1[s]*taskConfig[1].val + d2[s]*taskConfig[2].val + d3[s]*taskConfig[3].val;
+                      mins[s] = r0[s]*m0 + r1[s]*m1 + r2[s]*m2 + r3[s]*m3;
+                      revs[s] = r0[s]*v0 + r1[s]*v1 + r2[s]*v2 + r3[s]*v3;
                   }
 
-                  let minT = mins[0], maxT = mins[0];
-                  let minR = revs[0], maxR = revs[0];
-                  for(let s=1; s<sCount; s++){
-                      if(mins[s] < minT) minT = mins[s];
-                      if(mins[s] > maxT) maxT = mins[s];
-                      if(revs[s] < minR) minR = revs[s];
-                      if(revs[s] > maxR) maxR = revs[s];
+                  let minT=mins[0], maxT=mins[0], minR=revs[0], maxR=revs[0];
+                  for(let s=1; s<sCount; s++) {
+                      if(mins[s]<minT) minT=mins[s]; if(mins[s]>maxT) maxT=mins[s];
+                      if(revs[s]<minR) minR=revs[s]; if(revs[s]>maxR) maxR=revs[s];
                   }
 
-                  let diffT = maxT - minT;
-                  let diffR = maxR - minR;
-                  
-                  let dPrimary = targetMode === 'time' ? diffT : diffR;
-                  let dSecondary = targetMode === 'time' ? diffR : diffT;
+                  let dPri = targetMode === 'time' ? (maxT - minT) : (maxR - minR);
+                  let dSec = targetMode === 'time' ? (maxR - minR) : (maxT - minT);
 
-                  if (dPrimary < bestMetric.diff1 || (dPrimary === bestMetric.diff1 && dSecondary < bestMetric.diff2)) {
-                      bestMetric = { diff1: dPrimary, diff2: dSecondary };
-                      bestState = [d0, d1, d2, d3];
+                  if (dPri < bestMetric.diff1 || (dPri === bestMetric.diff1 && dSec < bestMetric.diff2)) {
+                      bestMetric = { diff1: dPri, diff2: dSec };
+                      bestState = [r0, r1, r2, r3];
                   }
 
                   processed++;
@@ -542,12 +559,11 @@
         // --- MODE 2: GENETIC ALGORITHM (Approx) ---
         else if (mode === 'genetic') {
            const { flatTasks, seed } = e.data;
-           const POP_SIZE = 200;
-           const GENERATIONS = 500;
-           const ELITISM = 10;
+           const POP_SIZE = 300; 
+           const GENERATIONS = 800; 
+           const ELITISM = 15;
            
            let population = [];
-           // Init Population
            for(let i=0; i<POP_SIZE; i++) {
                let genome = new Uint8Array(flatTasks.length);
                for(let j=0; j<flatTasks.length; j++) genome[j] = Math.floor(Math.random() * sCount);
@@ -557,37 +573,23 @@
            const calcFitness = (genome) => {
                let mins = new Float32Array(sCount);
                let revs = new Float32Array(sCount);
-               
                for(let i=0; i<genome.length; i++) {
-                   const s = genome[i];
-                   const t = flatTasks[i];
-                   mins[s] += t.min;
-                   revs[s] += t.val;
+                   const s = genome[i]; const t = flatTasks[i];
+                   mins[s] += t.min; revs[s] += t.val;
                }
-               
-               let minT = mins[0], maxT = mins[0];
-               let minR = revs[0], maxR = revs[0];
+               let minT=mins[0], maxT=mins[0], minR=revs[0], maxR=revs[0];
                for(let s=1; s<sCount; s++) {
-                   if(mins[s] < minT) minT = mins[s];
-                   if(mins[s] > maxT) maxT = mins[s];
-                   if(revs[s] < minR) minR = revs[s];
-                   if(revs[s] > maxR) maxR = revs[s];
+                   if(mins[s]<minT) minT=mins[s]; if(mins[s]>maxT) maxT=mins[s];
+                   if(revs[s]<minR) minR=revs[s]; if(revs[s]>maxR) maxR=revs[s];
                }
-               
-               const diffT = maxT - minT;
-               const diffR = maxR - minR;
-               const metric = targetMode === 'time' ? diffT : diffR;
-               const metric2 = targetMode === 'time' ? diffR : diffT;
-               
-               return { genome, metric, metric2, mins, revs };
+               const dPri = targetMode === 'time' ? (maxT - minT) : (maxR - minR);
+               const dSec = targetMode === 'time' ? (maxR - minR) : (maxT - minT);
+               return { genome, dPri, dSec };
            };
 
            for(let g=0; g<GENERATIONS; g++) {
                let scored = population.map(calcFitness);
-               scored.sort((a,b) => {
-                   if(a.metric !== b.metric) return a.metric - b.metric;
-                   return a.metric2 - b.metric2;
-               });
+               scored.sort((a,b) => (a.dPri !== b.dPri) ? a.dPri - b.dPri : a.dSec - b.dSec);
                
                if(g % 50 === 0) self.postMessage({ type: 'progress', val: g, total: GENERATIONS });
 
@@ -595,13 +597,13 @@
                for(let i=0; i<ELITISM; i++) nextGen.push(scored[i].genome);
                
                while(nextGen.length < POP_SIZE) {
-                   const p1 = scored[Math.floor(Math.random()*50)].genome;
-                   const p2 = scored[Math.floor(Math.random()*50)].genome;
+                   const p1 = scored[Math.floor(Math.random()*60)].genome; // Top 20%
+                   const p2 = scored[Math.floor(Math.random()*60)].genome;
                    let child = new Uint8Array(p1.length);
                    const cut = Math.floor(Math.random() * p1.length);
                    for(let k=0; k<p1.length; k++) child[k] = k < cut ? p1[k] : p2[k];
                    
-                   if(Math.random() < 0.2) {
+                   if(Math.random() < 0.3) {
                        const idx = Math.floor(Math.random() * child.length);
                        child[idx] = Math.floor(Math.random() * sCount);
                    }
@@ -611,25 +613,15 @@
            }
            
            let best = calcFitness(population[0]);
-           
-           // Convert back to grid counts
-           let counts = []; 
-           for(let s=0; s<sCount; s++) counts.push([0,0,0,0]);
-           
-           for(let i=0; i<best.genome.length; i++) {
-               const staffId = best.genome[i];
-               const typeId = flatTasks[i].type;
-               counts[staffId][typeId]++;
-           }
+           let counts = []; for(let s=0; s<sCount; s++) counts.push([0,0,0,0]);
+           for(let i=0; i<best.genome.length; i++) counts[best.genome[i]][flatTasks[i].type]++;
            
            let bestState = [];
            for(let t=0; t<4; t++) {
-               let col = [];
-               for(let s=0; s<sCount; s++) col.push(counts[s][t]);
+               let col = []; for(let s=0; s<sCount; s++) col.push(counts[s][t]);
                bestState.push(col);
            }
-           
-           self.postMessage({ type: 'done', bestState, bestMetric: { diff1: best.metric, diff2: best.metric2 } });
+           self.postMessage({ type: 'done', bestState, bestMetric: { diff1: best.dPri, diff2: best.dSec } });
         }
     } catch(err) {
         self.postMessage({ type: 'error', msg: err.message });
@@ -650,7 +642,6 @@ const icons = {
   layers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`
 };
 
-// Updated Colors for new palette - REPLACED DARK INDIGO (#3d405b) with Lavender (#a5a8c5) for visibility
 const staffColors = ["#e07a5f", "#81b29a", "#a5a8c5", "#f2cc8f", "#7b8cde", "#dfa06e", "#6fab90"];
 
 const toInt = v => { const n = parseInt(v); return isNaN(n)?0:n; }
@@ -664,187 +655,14 @@ let distMode = 'time';
 let sessionHistory = []; 
 let activeWorkers = [];
 
-
-
 const defaultTaskConfig = [
   { name: "90m", min: 90, val: 305 },
-  { name: "60m Package", min: 60, val: 120 },
-  { name: "60m Private", min: 60, val: 205 },
+  { name: "60m Pkg", min: 60, val: 120 },
+  { name: "60m Pvt", min: 60, val: 205 },
   { name: "15m", min: 15, val: 70 }
 ];
 
 let taskConfig = JSON.parse(JSON.stringify(defaultTaskConfig));
-
-/* --- DUAL-ENGINE WORKER (Brute Force + Genetic) --- */
-const workerScript = `
-  self.onmessage = function(e) {
-    const { mode, staffCount, taskConfig, targetMode } = e.data;
-    
-    // --- MODE 1: BRUTE FORCE (Exact, for small inputs) ---
-    if (mode === 'brute') {
-      const { chunkD0, allD1, allD2, allD3 } = e.data;
-      let bestState = null;
-      let bestMetric = { diff1: Infinity, diff2: Infinity };
-      
-      const total = chunkD0.length * allD1.length * allD2.length * allD3.length;
-      let processed = 0;
-      const reportInterval = Math.max(1000, Math.floor(total / 20));
-
-      for (let d0 of chunkD0) {
-        for (let d1 of allD1) {
-          for (let d2 of allD2) {
-            for (let d3 of allD3) {
-              
-              let mins = new Array(staffCount).fill(0);
-              let revs = new Array(staffCount).fill(0);
-              
-              for(let s=0; s<staffCount; s++) {
-                  mins[s] = d0[s]*taskConfig[0].min + d1[s]*taskConfig[1].min + d2[s]*taskConfig[2].min + d3[s]*taskConfig[3].min;
-                  revs[s] = d0[s]*taskConfig[0].val + d1[s]*taskConfig[1].val + d2[s]*taskConfig[2].val + d3[s]*taskConfig[3].val;
-              }
-
-              let minT = mins[0], maxT = mins[0];
-              let minR = revs[0], maxR = revs[0];
-              for(let s=1; s<staffCount; s++){
-                  if(mins[s] < minT) minT = mins[s];
-                  if(mins[s] > maxT) maxT = mins[s];
-                  if(revs[s] < minR) minR = revs[s];
-                  if(revs[s] > maxR) maxR = revs[s];
-              }
-
-              let diffT = maxT - minT;
-              let diffR = maxR - minR;
-              
-              let dPrimary = targetMode === 'time' ? diffT : diffR;
-              let dSecondary = targetMode === 'time' ? diffR : diffT;
-
-              if (dPrimary < bestMetric.diff1 || (dPrimary === bestMetric.diff1 && dSecondary < bestMetric.diff2)) {
-                  bestMetric = { diff1: dPrimary, diff2: dSecondary };
-                  bestState = [d0, d1, d2, d3];
-              }
-
-              processed++;
-              if(processed % reportInterval === 0) self.postMessage({ type: 'progress', val: processed, total: total });
-            }
-          }
-        }
-      }
-      self.postMessage({ type: 'done', bestState, bestMetric });
-    } 
-    
-    // --- MODE 2: GENETIC ALGORITHM (Fast, for large inputs) ---
-    else if (mode === 'genetic') {
-       const { flatTasks, seed } = e.data;
-       
-       // PRNG for consistent results across threads if needed, or just Math.random
-       // We use a simple population approach
-       
-       const POP_SIZE = 200;
-       const GENERATIONS = 500;
-       const ELITISM = 10;
-       
-       // Genome: Array where index = taskIndex, value = staffID
-       let population = [];
-       
-       // Init Population
-       for(let i=0; i<POP_SIZE; i++) {
-           let genome = new Uint8Array(flatTasks.length);
-           for(let j=0; j<flatTasks.length; j++) genome[j] = Math.floor(Math.random() * staffCount);
-           population.push(genome);
-       }
-       
-       const calcFitness = (genome) => {
-           let mins = new Array(staffCount).fill(0);
-           let revs = new Array(staffCount).fill(0);
-           
-           for(let i=0; i<genome.length; i++) {
-               const s = genome[i];
-               const t = flatTasks[i];
-               mins[s] += t.min;
-               revs[s] += t.val;
-           }
-           
-           let minT = mins[0], maxT = mins[0];
-           let minR = revs[0], maxR = revs[0];
-           for(let s=1; s<staffCount; s++) {
-               if(mins[s] < minT) minT = mins[s];
-               if(mins[s] > maxT) maxT = mins[s];
-               if(revs[s] < minR) minR = revs[s];
-               if(revs[s] > maxR) maxR = revs[s];
-           }
-           
-           const diffT = maxT - minT;
-           const diffR = maxR - minR;
-           const metric = targetMode === 'time' ? diffT : diffR;
-           const metric2 = targetMode === 'time' ? diffR : diffT;
-           
-           return { genome, metric, metric2, mins, revs };
-       };
-
-       for(let g=0; g<GENERATIONS; g++) {
-           // 1. Evaluate
-           let scored = population.map(calcFitness);
-           
-           // 2. Sort (Lower metric is better)
-           scored.sort((a,b) => {
-               if(a.metric !== b.metric) return a.metric - b.metric;
-               return a.metric2 - b.metric2;
-           });
-           
-           if(g % 50 === 0) self.postMessage({ type: 'progress', val: g, total: GENERATIONS });
-
-           // 3. Create Next Gen
-           let nextGen = [];
-           
-           // Elitism
-           for(let i=0; i<ELITISM; i++) nextGen.push(scored[i].genome);
-           
-           // Breeding / Mutation
-           while(nextGen.length < POP_SIZE) {
-               // Tournament Selection
-               const p1 = scored[Math.floor(Math.random()*50)].genome; // Pick from top 50
-               const p2 = scored[Math.floor(Math.random()*50)].genome;
-               
-               // Crossover
-               let child = new Uint8Array(p1.length);
-               const cut = Math.floor(Math.random() * p1.length);
-               for(let k=0; k<p1.length; k++) child[k] = k < cut ? p1[k] : p2[k];
-               
-               // Mutation (Swap Logic)
-               if(Math.random() < 0.2) {
-                   const idx = Math.floor(Math.random() * child.length);
-                   child[idx] = Math.floor(Math.random() * staffCount);
-               }
-               nextGen.push(child);
-           }
-           population = nextGen;
-       }
-       
-       // Final Best
-       let best = calcFitness(population[0]);
-       
-       // Convert Genome back to Counts format for the UI
-       let counts = []; // Array of staff, each has array of 4 task counts
-       for(let s=0; s<staffCount; s++) counts.push([0,0,0,0]);
-       
-       for(let i=0; i<best.genome.length; i++) {
-           const staffId = best.genome[i];
-           const typeId = flatTasks[i].type;
-           counts[staffId][typeId]++;
-       }
-       
-       // Format matching Brute Force output
-       let bestState = [];
-       for(let t=0; t<4; t++) {
-           let col = [];
-           for(let s=0; s<staffCount; s++) col.push(counts[s][t]);
-           bestState.push(col);
-       }
-       
-       self.postMessage({ type: 'done', bestState, bestMetric: { diff1: best.metric, diff2: best.metric2 } });
-    }
-  };
-`;
 
 /* --- INIT --- */
 function initUI() {
@@ -855,7 +673,6 @@ function initUI() {
   loadHistory();
 }
 
-/* --- CORE FUNCTIONS --- */
 function getCompositions(n, k) {
     if (k === 1) return [[n]];
     let results = [];
@@ -868,37 +685,114 @@ function getCompositions(n, k) {
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
+function cancelCalculation() {
+    activeWorkers.forEach(w => w.terminate());
+    activeWorkers = [];
+    document.getElementById('visModal').classList.remove('open');
+}
+
+function loadHistory() {
+  if (sessionHistory.length === 0) {
+      const stored = localStorage.getItem('workload_history');
+      if (stored) {
+          try { sessionHistory = JSON.parse(stored); } catch(e) { console.error(e); }
+      }
+  }
+
+  const list = document.getElementById('historyList');
+  const section = document.getElementById('historySection');
+  
+  if (sessionHistory.length === 0) {
+      section.classList.remove('has-data');
+      return;
+  }
+  
+  section.classList.add('has-data');
+  list.innerHTML = '';
+
+  sessionHistory.forEach(rec => {
+      const renderMiniGrid = (results) => {
+          return results.map((s, idx) => {
+               const color = staffColors[idx % staffColors.length];
+               const h = (s.mins / 60);
+               const hTxt = Number.isInteger(h) ? h : h.toFixed(1);
+               const taskTxt = s.counts.map((c, k) => {
+                   if (c === 0) return null;
+                   const name = rec.config && rec.config[k] ? rec.config[k].name : taskConfig[k].name; 
+                   return `${name}:${c}`;
+               }).filter(Boolean).join(' • ');
+
+               return `
+               <div class="rec-staff-item" style="border-left: 3px solid ${color};">
+                  <div class="rsi-name" style="color:${color}">Staff ${idx+1}</div>
+                  <div class="rsi-stats">
+                     <span class="rsi-time">${hTxt}h</span>
+                     <span class="rsi-money">RM${s.rev}</span>
+                  </div>
+                  <div class="rsi-tasks">${taskTxt}</div>
+               </div>`;
+          }).join('');
+      };
+
+      const timeBadges = generateVarianceBadges(rec.resTime);
+      const revBadges = generateVarianceBadges(rec.resRev);
+
+      const card = `
+        <div class="rec-card">
+           <div class="rec-meta">
+              <div class="rec-date">${rec.date} &bull; ${rec.staffCount} Staff</div>
+              <button class="btn-del-rec" onclick="deleteRecord(${rec.id})">${icons.trash}</button>
+           </div>
+           
+           <div class="rec-row-header">
+              <div class="rec-row-label">${icons.time} Time Optimized</div>
+              <div style="display:flex; gap:4px;">${timeBadges}</div>
+           </div>
+           <div class="rec-staff-grid" style="margin-bottom:16px;">
+              ${renderMiniGrid(rec.resTime)}
+           </div>
+
+           <div class="rec-row-header">
+              <div class="rec-row-label">${icons.cash} Revenue Optimized</div>
+              <div style="display:flex; gap:4px;">${revBadges}</div>
+           </div>
+           <div class="rec-staff-grid">
+              ${renderMiniGrid(rec.resRev)}
+           </div>
+        </div>
+      `;
+      list.innerHTML += card;
+  });
+}
+
 /* --- THE HYBRID SOLVER ENGINE --- */
 async function findBestDistribution(sCount, ins, targetMode, silent = false) {
     
-    // 1. Calculate Complexity
-    // We roughly estimate the search space size
     let complexity = 1;
     for(let i=0; i<4; i++) {
         if (ins[i] > 0) {
             let n = ins[i]; let k = sCount;
-            // n+k-1 C k-1
             let top = 1, bot = 1;
             for(let j=0; j<k-1; j++) { top *= (n+k-1-j); bot *= (j+1); }
             complexity *= (top/bot);
         }
     }
     
-    // THRESHOLD: If combos > 2 Million, switch to Genetic.
-    // iPhone 13 can handle ~5M brute force in 2 seconds.
-    // Older phones struggle at 1M. 2M is a safe middle ground.
-    const USE_GENETIC = complexity > 2000000;
-    
-    // UI Update
+    const algoPref = document.getElementById('algoSelect').value;
+    let USE_GENETIC = false;
+    if (algoPref === 'genetic') USE_GENETIC = true;
+    else if (algoPref === 'brute') USE_GENETIC = false;
+    else USE_GENETIC = complexity > 15000000;
+
     if(!silent) {
       document.getElementById('visModal').classList.add('open');
       document.getElementById('visBar').style.width = "0%";
       if(USE_GENETIC) {
           document.getElementById('visStatus').innerText = "Running Genetic Evolution...";
-          document.getElementById('visBest').innerText = "Complex Input Detected";
+          document.getElementById('visBest').innerText = "High Complexity Mode";
       } else {
-          document.getElementById('visStatus').innerText = "Calculating Exact Permutations...";
-          document.getElementById('visBest').innerText = "Small Input Detected";
+          document.getElementById('visStatus').innerText = "Calculating Permutations...";
+          document.getElementById('visBest').innerText = "Brute Force Mode";
       }
     }
     await delay(10);
@@ -907,121 +801,157 @@ async function findBestDistribution(sCount, ins, targetMode, silent = false) {
     activeWorkers = [];
 
     const concurrency = navigator.hardwareConcurrency || 4;
-    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const blob = new Blob([document.getElementById('worker-code').textContent], { type: 'application/javascript' });
     const workerUrl = URL.createObjectURL(blob);
     
     let promises = [];
     
     if (USE_GENETIC) {
-        // --- GENETIC PATH ---
-        // Flatten tasks for GA
         let flatTasks = [];
         for(let i=0; i<4; i++) {
             for(let k=0; k<ins[i]; k++) flatTasks.push({ type: i, min: taskConfig[i].min, val: taskConfig[i].val });
         }
 
-        // Spawn workers (Parallel Islands Model)
-        // Each worker runs its own evolution. We pick the best result of all islands.
         for(let i=0; i<concurrency; i++) {
-            const p = new Promise((resolve) => {
-                const worker = new Worker(workerUrl);
-                activeWorkers.push(worker);
-                worker.onmessage = (e) => {
-                    if (e.data.type === 'progress' && !silent && i===0) {
+            const p = new Promise((resolve, reject) => {
+                const w = new Worker(workerUrl);
+                activeWorkers.push(w);
+                w.onerror = e => { console.error(e); reject(new Error("Worker Crash")); };
+                w.onmessage = e => {
+                    if (e.data.type === 'error') reject(new Error(e.data.msg));
+                    else if (e.data.type === 'progress' && !silent && i===0) {
                          const pct = ((e.data.val / e.data.total) * 100).toFixed(0);
                          document.getElementById('visBar').style.width = `${pct}%`;
-                    }
-                    if (e.data.type === 'done') resolve(e.data);
+                    } else if (e.data.type === 'done') resolve(e.data);
                 };
-                worker.postMessage({
-                    mode: 'genetic',
-                    staffCount: sCount,
-                    taskConfig: taskConfig,
-                    targetMode: targetMode,
-                    flatTasks: flatTasks,
-                    seed: i 
-                });
+                w.postMessage({ mode: 'genetic', staffCount: sCount, taskConfig, targetMode, flatTasks, seed: i });
             });
             promises.push(p);
         }
 
     } else {
-        // --- BRUTE FORCE PATH ---
-        const d0 = getCompositions(ins[0], sCount);
-        const d1 = getCompositions(ins[1], sCount);
-        const d2 = getCompositions(ins[2], sCount);
-        const d3 = getCompositions(ins[3], sCount);
-        const totalCombinations = d0.length * d1.length * d2.length * d3.length;
-        const chunkSize = Math.ceil(d0.length / concurrency);
+        // --- SMART PARALLEL SPLIT ---
+        // 1. Generate all base combinations
+        const comps = [
+            getCompositions(ins[0], sCount),
+            getCompositions(ins[1], sCount),
+            getCompositions(ins[2], sCount),
+            getCompositions(ins[3], sCount)
+        ];
         
-        for (let i = 0; i < concurrency; i++) {
-            const start = i * chunkSize; const end = start + chunkSize;
-            const chunkD0 = d0.slice(start, end);
-            if (chunkD0.length === 0) continue;
+        // 2. Find heaviest task to split
+        let maxLen = -1, splitIdx = 0;
+        comps.forEach((c, i) => { if(c.length > maxLen) { maxLen = c.length; splitIdx = i; } });
+        
+        // 3. Prepare chunks
+        const splitArr = comps[splitIdx];
+        const chunkSize = Math.ceil(splitArr.length / concurrency);
+        
+        // 4. Spawn Workers
+        for(let i=0; i<concurrency; i++) {
+            const start = i * chunkSize;
+            const end = start + chunkSize;
+            const chunk = splitArr.slice(start, end);
+            if (chunk.length === 0) continue;
 
-            const p = new Promise((resolve) => {
-                const worker = new Worker(workerUrl);
-                activeWorkers.push(worker);
+            let staticComps = [];
+            comps.forEach((c, idx) => { if(idx !== splitIdx) staticComps.push(c); });
+
+            const p = new Promise((resolve, reject) => {
+                const w = new Worker(workerUrl);
+                activeWorkers.push(w);
+                w.onerror = e => { console.error(e); reject(new Error("Worker Crash")); };
+                
                 let currentProg = 0;
-                worker.onmessage = (e) => {
-                    if (e.data.type === 'progress') {
+                w.onmessage = e => {
+                    if (e.data.type === 'error') reject(new Error(e.data.msg));
+                    else if (e.data.type === 'progress') {
                         currentProg = e.data.val;
-                        // Approximate visualization for parallel progress
-                        if(!silent && i===0) { 
-                             // Show progress of first worker as proxy
-                             const pct = ((currentProg / (totalCombinations/concurrency)) * 100).toFixed(0);
-                             document.getElementById('visBar').style.width = `${pct}%`;
-                        }
+                        if (!silent && i === 0) document.getElementById('visBar').style.width = `${(currentProg / (e.data.total) * 100).toFixed(0)}%`;
                     } else if (e.data.type === 'done') resolve(e.data);
                 };
-                worker.postMessage({
-                    mode: 'brute',
-                    staffCount: sCount, taskConfig: taskConfig, targetMode: targetMode,
-                    chunkD0: chunkD0, allD1: d1, allD2: d2, allD3: d3
-                });
+                
+                w.postMessage({ mode: 'brute', staffCount: sCount, taskConfig, targetMode, chunks: chunk, splitIdx, staticComps });
             });
             promises.push(p);
         }
     }
 
-    const results = await Promise.all(promises);
-    
-    // Reduce results to best
-    let globalBestState = null;
-    let globalBestMetric = { diff1: Infinity, diff2: Infinity };
+    let results;
+    try {
+        results = await Promise.all(promises);
+    } catch(e) {
+        if(!silent) { alert(e.message); document.getElementById('visModal').classList.remove('open'); }
+        return null;
+    }
 
+    let globalBest = { diff1: Infinity, diff2: Infinity }, bestState = null;
     results.forEach(res => {
-        if (!res.bestState) return;
+        if (!res || !res.bestState) return;
         let isBetter = false;
-        if (res.bestMetric.diff1 < globalBestMetric.diff1) isBetter = true;
-        else if (res.bestMetric.diff1 === globalBestMetric.diff1 && res.bestMetric.diff2 < globalBestMetric.diff2) isBetter = true;
+        if (res.bestMetric.diff1 < globalBest.diff1) isBetter = true;
+        else if (res.bestMetric.diff1 === globalBest.diff1 && res.bestMetric.diff2 < globalBest.diff2) isBetter = true;
 
-        if (isBetter) {
-            globalBestMetric = res.bestMetric;
-            globalBestState = res.bestState;
-        }
+        if (isBetter) { globalBest = res.bestMetric; bestState = res.bestState; }
     });
 
     if(!silent) document.getElementById('visModal').classList.remove('open');
     URL.revokeObjectURL(workerUrl);
 
-    if (!globalBestState) return [];
+    if (!bestState) return null;
 
     let result = [];
     for(let s=0; s<sCount; s++) {
-        let counts = [globalBestState[0][s], globalBestState[1][s], globalBestState[2][s], globalBestState[3][s]];
-        let m=0, r=0;
-        counts.forEach((c, i) => { m += c*taskConfig[i].min; r += c*taskConfig[i].val; });
+        let counts = [bestState[0][s], bestState[1][s], bestState[2][s], bestState[3][s]];
+        let m = 0, r = 0;
+        counts.forEach((c, i) => { m += c * taskConfig[i].min; r += c * taskConfig[i].val; });
         result.push({ id: s, counts, revenue: r, minutes: m });
     }
     return result;
 }
 
-/* --- REST OF APP (Settings, Render, UI) --- */
-function toggleSettings() {
-  document.getElementById('settingsModal').classList.toggle('open');
+/* --- RECALC LOGIC --- */
+async function recalculateUnlocked(){
+  if (distMode === 'combined' || !currentData) return;
+  
+  let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+  let held = [0,0,0,0];
+  let lockedIndices = [];
+  let activeIndices = [];
+
+  for(let s=0; s<staffCount; s++) {
+      if(locked[s]) {
+          lockedIndices.push(s);
+          for(let i=0; i<4; i++) held[i] += currentData.counts[s][i];
+      } else {
+          activeIndices.push(s);
+      }
+  }
+
+  let remainder = [];
+  for(let i=0; i<4; i++) {
+      let r = ins[i] - held[i];
+      if (r < 0) { alert("Locked values exceed total inputs."); return; }
+      remainder.push(r);
+  }
+
+  const activeCount = activeIndices.length;
+  if(activeCount === 0) { alert("All staff locked."); return; }
+
+  const solution = await findBestDistribution(activeCount, remainder, distMode);
+
+  if(!solution) return; 
+
+  solution.forEach((res, idx) => {
+      const realStaffIndex = activeIndices[idx]; 
+      currentData.counts[realStaffIndex] = res.counts;
+  });
+
+  renderGrid();
 }
 
+/* --- UI HELPERS --- */
+function toggleSettings() { document.getElementById('settingsModal').classList.toggle('open'); }
 function toggleTheme() {
   const c = document.documentElement.getAttribute('data-theme');
   const n = c === 'dark' ? 'light' : 'dark';
@@ -1034,7 +964,6 @@ function renderTheme() {
   document.documentElement.setAttribute('data-theme', t);
   document.getElementById('themeBtn').innerHTML = t === 'dark' ? icons.sun : icons.moon;
 }
-
 function toggleMode() {
   if (distMode === 'time') distMode = 'revenue';
   else if (distMode === 'revenue') distMode = 'combined';
@@ -1058,18 +987,17 @@ function renderMode() {
   if (distMode === 'time') {
     btn.innerHTML = `${icons.time} HOURS`; 
     btn.classList.add('active-time'); btn.classList.remove('active-rev', 'active-combined');
-    lbl.innerHTML = `${icons.time} Prioritizing: HOURS`;
+    lbl.innerHTML = `${icons.time} PRIORITY: HOURS`;
   } else if (distMode === 'revenue') {
     btn.innerHTML = `${icons.cash} REVENUE`; 
     btn.classList.add('active-rev'); btn.classList.remove('active-time', 'active-combined');
-    lbl.innerHTML = `${icons.cash} Prioritizing: REVENUE`;
+    lbl.innerHTML = `${icons.cash} PRIORITY: REVENUE`;
   } else {
     btn.innerHTML = `${icons.layers} COMBINED`; 
     btn.classList.add('active-combined'); btn.classList.remove('active-time', 'active-rev');
-    lbl.innerHTML = `${icons.layers} Prioritizing: COMBINED`;
+    lbl.innerHTML = `${icons.layers} PRIORITY: COMBINED`;
   }
 }
-
 function loadConfig() {
   const saved = localStorage.getItem('task_config');
   if(saved) {
@@ -1077,17 +1005,12 @@ function loadConfig() {
       const parsed = JSON.parse(saved);
       taskConfig = defaultTaskConfig.map((def, i) => {
         const p = parsed[i] || {};
-        return {
-          name: p.name || def.name,
-          min: p.min !== undefined ? p.min : def.min,
-          val: p.val !== undefined ? p.val : def.val
-        };
+        return { name: p.name || def.name, min: p.min !== undefined ? p.min : def.min, val: p.val !== undefined ? p.val : def.val };
       });
     } catch(e) { taskConfig = JSON.parse(JSON.stringify(defaultTaskConfig)); }
   }
   updateInputLabels();
 }
-
 function saveConfig() {
   for(let i=0; i<4; i++) {
     taskConfig[i].name = document.getElementById(`cfg_name_${i}`).value || `Task ${i+1}`;
@@ -1098,37 +1021,28 @@ function saveConfig() {
   updateInputLabels(); updateStats();
   if (currentData || combinedData) renderGrid();
 }
-
 function renderRatesPanel() {
   const container = document.getElementById('ratesPanel'); container.innerHTML = '';
   taskConfig.forEach((cfg, i) => {
-    container.innerHTML += `
-      <div class="rate-row">
-        <input class="rate-name" type="text" id="cfg_name_${i}" value="${cfg.name}" placeholder="Name" oninput="saveConfig()">
-        <div class="rate-input-group"><input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()"><span>m</span></div>
-        <div class="rate-input-group"><input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()"><span>RM</span></div>
-      </div>`;
+    container.innerHTML += `<div class="rate-row"><input class="rate-name" type="text" id="cfg_name_${i}" value="${cfg.name}" placeholder="Name" oninput="saveConfig()"><div class="rate-input-group"><input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()"><span>m</span></div><div class="rate-input-group"><input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()"><span>RM</span></div></div>`;
   });
 }
-
 function updateInputLabels() {
-  taskConfig.forEach((cfg, i) => { document.getElementById(`lbl_${i}`).innerText = `${cfg.name} (${cfg.val})`; });
+  taskConfig.forEach((cfg, i) => { document.getElementById(`lbl_${i}`).innerText = `${cfg.name}`; });
 }
 
 function updateStats(){
   let count = 0; let hrs = 0;
   let complexity = 1;
   const sCount = Math.max(1, inputVal("totalStaff"));
-  
   for(let i=0; i<4; i++) { 
     const qty = inputVal(`in_${i}`); 
     count += qty; 
     hrs += (qty * taskConfig[i].min); 
-    
     if (qty > 0) {
        const n = qty; const k = sCount;
        let top = 1; let bot = 1;
-       let limit = Math.min(k-1, n); // optimization
+       let limit = Math.min(k-1, n);
        for(let j=0; j<k-1; j++) { top *= (n+k-1-j); bot *= (j+1); }
        complexity *= (top/bot);
     }
@@ -1142,318 +1056,69 @@ function updateStats(){
       if (complexity >= 1000000) compStr = (complexity / 1000000).toFixed(1) + "M";
       else if (complexity >= 1000) compStr = (complexity / 1000).toFixed(1) + "k";
       else compStr = Math.round(complexity);
-      
-      // Update logic label
-      const useGA = complexity > 2000000;
-      compStr += useGA ? ` (Genetic)` : ` (Exact)`;
   }
   document.getElementById("valComplexity").innerText = compStr;
 }
 
 async function saveDualRecord() {
-    const btn = document.querySelector('.btn-save');
-    const originalText = btn.innerText;
-    
-    if(!currentData && !combinedData) {
-        alert("Please distribute first.");
-        return;
-    }
-
-    btn.innerText = "Saving...";
-    btn.disabled = true;
-    await delay(50);
-
+    const btn = document.querySelector('.btn-save'); const originalText = btn.innerText;
+    if(!currentData && !combinedData) { alert("Please distribute first."); return; }
+    btn.innerText = "Saving..."; btn.disabled = true; await delay(50);
     try {
         const sCount = staffCount;
         let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
-
         const resTime = await findBestDistribution(sCount, ins, 'time', true);
         const resRev = await findBestDistribution(sCount, ins, 'revenue', true);
-        
-        if (!resTime || !resRev || resTime.length === 0 || resRev.length === 0) {
-            throw new Error("Calculation failed");
-        }
-
+        if (!resTime || !resRev || resTime.length === 0 || resRev.length === 0) throw new Error("Calculation failed");
         const mapRes = (r) => r.map(s => ({id:s.id+1, counts:s.counts, rev:s.revenue, mins:s.minutes}));
-
-        const record = {
-            id: Date.now(),
-            date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            staffCount: sCount,
-            config: JSON.parse(JSON.stringify(taskConfig)),
-            resTime: mapRes(resTime),
-            resRev: mapRes(resRev)
-        };
-
-        sessionHistory.unshift(record);
+        const record = { id: Date.now(), date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), staffCount: sCount, config: JSON.parse(JSON.stringify(taskConfig)), resTime: mapRes(resTime), resRev: mapRes(resRev) };
+        sessionHistory.unshift(record); 
+        localStorage.setItem('workload_history', JSON.stringify(sessionHistory));
         loadHistory();
-        
-    } catch (e) {
-        console.error(e);
-        alert("Error saving: " + e.message);
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
+    } catch (e) { console.error(e); alert("Error saving: " + e.message); } finally { btn.innerText = originalText; btn.disabled = false; }
+}
+
+function deleteRecord(id) {
+    sessionHistory = sessionHistory.filter(r => r.id !== id);
+    localStorage.setItem('workload_history', JSON.stringify(sessionHistory));
+    loadHistory();
 }
 
 async function initialCalculate(){
   staffCount = Math.max(1, inputVal("totalStaff"));
   let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
   const totalTasks = ins.reduce((a,b)=>a+b,0);
-  
   if(staffCount<=0 || totalTasks===0) { alert("Please check inputs"); return; }
   
   if (distMode === 'combined') {
       const rTime = await findBestDistribution(staffCount, ins, 'time');
       const rRev = await findBestDistribution(staffCount, ins, 'revenue');
-      
-      if (!rTime || !rRev) { alert("Calculation failed."); return; }
-      
-      combinedData = {
-          timeRes: rTime.map(s => ({...s, counts:[...s.counts]})),
-          revRes: rRev.map(s => ({...s, counts:[...s.counts]}))
-      };
+      if (!rTime || !rRev) return; 
+      combinedData = { timeRes: rTime.map(s => ({...s, counts:[...s.counts]})), revRes: rRev.map(s => ({...s, counts:[...s.counts]})) };
       currentData = null; 
   } else {
       const bestResult = await findBestDistribution(staffCount, ins, distMode);
-      if (!bestResult || bestResult.length === 0) { alert("Calculation failed."); return; }
-
+      if (!bestResult || bestResult.length === 0) return; 
       currentData = { counts: [] };
       bestResult.forEach(s => { currentData.counts.push([...s.counts]); });
       combinedData = null;
   }
-  
   locked = new Array(staffCount).fill(false);
   renderGrid(); 
   document.getElementById("recalcBtn").style.display = "none";
-}
-
-function recalculateUnlocked(){
-  if (distMode === 'combined' || !currentData) return;
-  
-  let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
-  let held = [0,0,0,0]; let states = [];
-  
-  for (let s=0; s<staffCount; s++){
-    const l = locked[s]; let sTasks = []; let sCounts = currentData.counts[s];
-    if(l) { 
-        for(let i=0; i<4; i++) {
-            held[i] += sCounts[i];
-            for(let k=0; k<sCounts[i]; k++) sTasks.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
-        }
-    }
-    let m = 0; let r = 0; sTasks.forEach(t => { m+=t.dur; r+=t.val; });
-    states.push({ id:s, locked:l, minutes:l?m:0, revenue:l?r:0, tasks: sTasks, counts: l ? [...sCounts] : [0,0,0,0] });
-  }
-  
-  for(let i=0; i<4; i++) if(held[i] > ins[i]) { alert("Locked values exceed inputs"); return; }
-  
-  let pool = [];
-  for(let i=0; i<4; i++) {
-      const needed = ins[i] - held[i];
-      for(let k=0; k<needed; k++) pool.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
-  }
-  
-  if(pool.length) {
-      pool.sort((a, b) => {
-          if (distMode === 'time') return b.dur - a.dur;
-          else {
-              if (b.val !== a.val) return b.val - a.val;
-              return b.dur - a.dur;
-          }
-      });
-      pool.forEach(task => {
-        let bestIdx = -1; let minPrimary = Infinity; let minSecondary = Infinity;
-        for (let i=0; i<states.length; i++) {
-            if (states[i].locked) continue;
-            const sRev = states[i].revenue; const sTime = states[i].minutes;
-            const cPri = distMode === 'time' ? sTime : sRev;
-            const cSec = distMode === 'time' ? 0 : sTime;
-            if (cPri < minPrimary) { minPrimary = cPri; minSecondary = cSec; bestIdx = i; } 
-            else if (cPri === minPrimary) {
-                if (distMode === 'revenue' && cSec < minSecondary) { minSecondary = cSec; bestIdx = i; } 
-                else if (distMode === 'time') { bestIdx = i; }
-            }
-        }
-        if (bestIdx !== -1) {
-            states[bestIdx].minutes += task.dur; states[bestIdx].revenue += task.val;
-            states[bestIdx].tasks.push(task); states[bestIdx].counts[task.typeIdx]++;
-        }
-      });
-  }
-  
-  currentData = { counts: [] }; 
-  states.forEach(s => { currentData.counts.push([...s.counts]); });
-  renderGrid();
-}
-
-function generateVarianceBadges(dataArr) {
-    if(!dataArr) return "";
-    const mins = dataArr.map(s => s.minutes || s.mins);
-    const minT = Math.min(...mins); const maxT = Math.max(...mins);
-    let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
-    let tClass = parseFloat(tVar) < 10 ? 'ok' : (parseFloat(tVar) < 20 ? 'warn' : 'bad');
-    let tBadge = `<span class="var-badge ${tClass}">Time: ${tVar}%</span>`;
-
-    const revs = dataArr.map(s => s.revenue || s.rev);
-    const minRev = Math.min(...revs); const maxRev = Math.max(...revs);
-    let rVar = minRev > 0 ? (((maxRev - minRev) / minRev) * 100).toFixed(1) : "0.0";
-    let rClass = parseFloat(rVar) < 10 ? 'ok' : (parseFloat(rVar) < 20 ? 'warn' : 'bad');
-    let rBadge = `<span class="var-badge ${rClass}">Rev: ${rVar}%</span>`;
-
-    return `<div class="var-area" style="margin-left:auto; display:flex; gap:6px;">${tBadge}${rBadge}</div>`;
-}
-
-function loadHistory() {
-  const list = document.getElementById('historyList');
-  if (sessionHistory.length === 0) { 
-    document.getElementById('historySection').classList.remove('has-data'); 
-    return; 
-  }
-  document.getElementById('historySection').classList.add('has-data');
-  list.innerHTML = '';
-
-  const renderStaffGrid = (staffData, cfg) => {
-      let html = '';
-      staffData.forEach((staff, idx) => {
-          const color = staffColors[idx % staffColors.length];
-          const hrs = (staff.mins / 60).toFixed(1);
-          let breakdown = [];
-          staff.counts.forEach((c, i) => { if(c > 0) breakdown.push(`${cfg[i].name}:<b>${c}</b>`); });
-          html += `<div class="rec-staff-item"><div class="rsi-name" style="color:${color}">Staff ${staff.id}</div><div class="rsi-stats"><div class="rsi-money">RM ${staff.rev}</div><div class="rsi-time">${hrs}h</div></div><div class="rsi-tasks">${breakdown.join(' &bull; ')}</div></div>`;
-      });
-      return html;
-  };
-
-  sessionHistory.forEach(rec => {
-    list.innerHTML += `
-      <div class="rec-card">
-        <div class="rec-meta">
-          <span class="rec-date">${rec.date}</span>
-          <button class="btn-del-rec" onclick="deleteRecord(${rec.id})">${icons.trash}</button>
-        </div>
-        <div>
-          <div class="rec-row-header">
-            <div class="rec-row-label lbl-time">${icons.time} Opt: HOURS</div>
-            ${generateVarianceBadges(rec.resTime)}
-          </div>
-          <div class="rec-staff-grid">${renderStaffGrid(rec.resTime, rec.config)}</div>
-        </div>
-        <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:10px;">
-          <div class="rec-row-header">
-             <div class="rec-row-label lbl-rev">${icons.cash} Opt: REVENUE</div>
-             ${generateVarianceBadges(rec.resRev)}
-          </div>
-          <div class="rec-staff-grid">${renderStaffGrid(rec.resRev, rec.config)}</div>
-        </div>
-      </div>`;
-  });
-}
-
-function deleteRecord(id) {
-  sessionHistory = sessionHistory.filter(r => r.id !== id);
-  loadHistory();
-}
-
-function renderGrid(){
-  const container = document.getElementById("resultsContainer"); 
-  container.innerHTML = "";
-  
-  const calcStats = (counts) => {
-      let allM = [], allR = [];
-      counts.forEach((cnt, idx) => {
-          let m=0, r=0;
-          cnt.forEach((c, k) => { m += c * taskConfig[k].min; r += c * taskConfig[k].val; });
-          allM.push(m); allR.push(r);
-      });
-      return { mins: allM, revs: allR };
-  };
-
-  const generateCards = (dataCounts, modeName) => {
-      let html = "";
-      dataCounts.forEach((myCounts, i) => {
-        const c = staffColors[i % staffColors.length];
-        let totalMins = 0; let totalRev = 0;
-        myCounts.forEach((cnt, idx) => { totalMins += cnt * taskConfig[idx].min; totalRev += cnt * taskConfig[idx].val; });
-        const hrs = totalMins/60; const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
-        
-        let heroHTML, subHTML;
-        if (modeName === 'time') { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = ``; }
-        else if (modeName === 'revenue') { heroHTML = `<span class="prefix">RM</span>${totalRev}`; subHTML = `${hrsTxt}h`; }
-        else { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = `<span class="prefix">RM</span>${totalRev}`; }
-
-        const isLocked = locked[i]; 
-        const lockClass = isLocked ? "locked" : ""; 
-        const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
-        const disableLock = distMode === 'combined' ? 'disabled' : ''; 
-
-        let tasksHTML = "";
-        for(let k=0; k<4; k++) {
-            const cnt = myCounts[k]; const cssClass = cnt > 0 ? "" : "is-zero"; const label = taskConfig[k].name;
-            tasksHTML += `<div class="task-row ${cssClass}"><span class="task-label">${label}</span><input class="task-input" type="number" data-staff="${i}" data-idx="${k}" data-mode="${modeName}" value="${cnt}" oninput="manualEdit(this)"></div>`;
-        }
-        
-        html += `<div class="staff-card"><div class="card-border-top" style="background:${c}"></div><div class="card-header"><div class="staff-name" style="color:${c}">Staff ${i+1}</div><button class="lock-btn ${lockClass} ${disableLock}" onclick="toggleLock(${i})" aria-label="Lock">${lockIcon}</button></div><div class="card-hero"><div class="hero-main">${heroHTML}</div><div class="hero-sub"><div class="hero-sec">${subHTML}</div></div></div><div class="card-tasks">${tasksHTML}</div></div>`;
-      });
-      return html;
-  };
-
-  if (distMode === 'combined' && combinedData) {
-      container.innerHTML = `
-        <div class="split-grid-wrapper">
-           <div class="grid-title">${icons.time} Optimized for HOURS ${generateVarianceBadges(combinedData.timeRes)}</div>
-           <div class="results-grid">${generateCards(combinedData.timeRes.map(s=>s.counts), 'combined_t')}</div>
-        </div>
-        <div class="split-grid-wrapper" style="margin-top:12px; border-top:2px dashed var(--border); padding-top:12px;">
-           <div class="grid-title">${icons.cash} Optimized for REVENUE ${generateVarianceBadges(combinedData.revRes)}</div>
-           <div class="results-grid">${generateCards(combinedData.revRes.map(s=>s.counts), 'combined_r')}</div>
-        </div>
-      `;
-  } else if (currentData) {
-      const stats = calcStats(currentData.counts);
-      
-      const minT = Math.min(...stats.mins); const maxT = Math.max(...stats.mins);
-      let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
-      let tClass = parseFloat(tVar) < 10 ? 'ok' : (parseFloat(tVar) < 20 ? 'warn' : 'bad');
-      
-      const minR = Math.min(...stats.revs); const maxR = Math.max(...stats.revs);
-      let rVar = minR > 0 ? (((maxR-minR)/minR)*100).toFixed(1) : "0.0";
-      let rClass = parseFloat(rVar) < 10 ? 'ok' : (parseFloat(rVar) < 20 ? 'warn' : 'bad');
-
-      const badgesHTML = `
-        <div style="display:flex; justify-content:flex-end; gap:6px; margin-bottom:8px;">
-          <span class="var-badge ${tClass}">Time: ${tVar}%</span>
-          <span class="var-badge ${rClass}">Rev: ${rVar}%</span>
-        </div>`;
-      
-      container.innerHTML = badgesHTML + `<div class="results-grid">${generateCards(currentData.counts, distMode)}</div>`;
-  } else {
-      container.innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
-  }
 }
 
 function manualEdit(el){
   const staff = parseInt(el.getAttribute('data-staff')); 
   const idx = parseInt(el.getAttribute('data-idx'));
   const mode = el.getAttribute('data-mode');
-  let val = parseInt(el.value);
-  if(isNaN(val)) val = 0;
-  
+  let val = parseInt(el.value); if(isNaN(val)) val = 0;
   if (distMode === 'combined') {
      if(mode === 'combined_t') combinedData.timeRes[staff].counts[idx] = val;
      if(mode === 'combined_r') combinedData.revRes[staff].counts[idx] = val;
-     const recalc = (arr) => {
-         let m=0, r=0;
-         arr[staff].counts.forEach((c, k) => { m += c * taskConfig[k].min; r += c * taskConfig[k].val; });
-         arr[staff].minutes = m; arr[staff].revenue = r;
-     }
-     if(mode === 'combined_t') recalc(combinedData.timeRes);
-     else recalc(combinedData.revRes);
-     
-  } else {
-      currentData.counts[staff][idx] = val;
-  }
+     const recalc = (arr) => { let m=0, r=0; arr[staff].counts.forEach((c, k) => { m += c * taskConfig[k].min; r += c * taskConfig[k].val; }); arr[staff].minutes = m; arr[staff].revenue = r; }
+     if(mode === 'combined_t') recalc(combinedData.timeRes); else recalc(combinedData.revRes);
+  } else { currentData.counts[staff][idx] = val; }
   renderGrid();
 }
 
@@ -1471,6 +1136,89 @@ function resetAll(){
   document.getElementById("resultsContainer").innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
   currentData = null; combinedData = null; locked=[]; staffCount=0;
   document.getElementById("recalcBtn").style.display = "none";
+}
+
+function generateVarianceBadges(data) {
+    if(!data || data.length === 0) return '';
+    const mins = data.map(s => s.minutes || s.mins);
+    const minT = Math.min(...mins); const maxT = Math.max(...mins);
+    let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
+
+    const revs = data.map(s => s.revenue || s.rev);
+    const minRev = Math.min(...revs); const maxRev = Math.max(...revs);
+    let revVar = minRev > 0 ? (((maxRev - minRev) / minRev) * 100).toFixed(1) : "0.0";
+
+    return `<span class="var-badge ${parseFloat(tVar)<10?'ok':'warn'}">Time:${tVar}%</span><span class="var-badge ${parseFloat(revVar)<10?'ok':'warn'}">Rev:${revVar}%</span>`;
+}
+
+function renderGrid(){
+  const grid = document.getElementById("resultsContainer"); grid.innerHTML = "";
+  
+  // -- COMBINED MODE --
+  if (distMode === 'combined' && combinedData) {
+      
+      const renderSubGrid = (data, type) => {
+          let html = "";
+          data.forEach((staff, i) => {
+             const c = staffColors[i % staffColors.length];
+             let totalMins = 0; let totalRev = 0;
+             staff.counts.forEach((cnt, idx) => { totalMins += cnt * taskConfig[idx].min; totalRev += cnt * taskConfig[idx].val; });
+             const hrs = totalMins/60; const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+             
+             let tasksHTML = "";
+             for(let k=0; k<4; k++) {
+                const cnt = staff.counts[k]; const cssClass = cnt > 0 ? "" : "is-zero"; const label = taskConfig[k].name;
+                tasksHTML += `<div class="task-row ${cssClass}"><span class="task-label">${label}</span><input class="task-input" type="number" data-staff="${i}" data-idx="${k}" data-mode="combined_${type==='HOURS'?'t':'r'}" value="${cnt}" oninput="manualEdit(this)"></div>`;
+             }
+             
+             let heroHTML, subHTML;
+             if(type === 'HOURS') { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = `<span class="prefix">RM</span>${totalRev}`; }
+             else { heroHTML = `<span class="prefix">RM</span>${totalRev}`; subHTML = `${hrsTxt}h`; }
+             
+             html += `<div class="staff-card"><div class="card-border-top" style="background:${c}"></div><div class="card-header"><div class="staff-name" style="color:${c}">Staff ${i+1}</div></div><div class="card-hero"><div class="hero-main">${heroHTML}</div><div class="hero-sub"><div class="hero-sec">${subHTML}</div></div></div><div class="card-tasks">${tasksHTML}</div></div>`;
+          });
+          return html;
+      };
+
+      grid.innerHTML = `
+      <div class="split-grid-wrapper">
+         <div class="grid-title">${icons.time} Optimized for HOURS <div style="margin-left:auto; display:flex; gap:6px;">${generateVarianceBadges(combinedData.timeRes)}</div></div>
+         <div class="results-grid">${renderSubGrid(combinedData.timeRes, 'HOURS')}</div>
+      </div>
+      <div class="split-grid-wrapper" style="margin-top:12px;">
+         <div class="grid-title">${icons.cash} Optimized for REVENUE <div style="margin-left:auto; display:flex; gap:6px;">${generateVarianceBadges(combinedData.revRes)}</div></div>
+         <div class="results-grid">${renderSubGrid(combinedData.revRes, 'REVENUE')}</div>
+      </div>`;
+      return;
+  }
+
+  // -- SINGLE MODE --
+  if (!currentData) return;
+
+  grid.innerHTML = '<div class="split-grid-wrapper"><div class="grid-title">Results <div style="margin-left:auto; display:flex; gap:6px;">' + generateVarianceBadges(currentData.counts.map(c => {
+      let m=0, r=0; c.forEach((x,i)=>{m+=x*taskConfig[i].min; r+=x*taskConfig[i].val}); return {mins:m, rev:r};
+  })) + '</div></div><div class="results-grid"></div></div>';
+  
+  const gridEl = grid.querySelector('.results-grid');
+
+  for(let i=0; i<staffCount; i++){
+    const c = staffColors[i % staffColors.length]; const myCounts = currentData.counts[i];
+    let totalMins = 0; let totalRev = 0;
+    myCounts.forEach((cnt, idx) => { totalMins += cnt * taskConfig[idx].min; totalRev += cnt * taskConfig[idx].val; });
+    const hrs = totalMins/60; const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+    const isLocked = locked[i]; const lockClass = isLocked ? "locked" : ""; const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
+    
+    let heroHTML, subHTML;
+    if (distMode === 'time') { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = `<span class="prefix">RM</span>${totalRev}`; } 
+    else { heroHTML = `<span class="prefix">RM</span>${totalRev}`; subHTML = `${hrsTxt}h`; }
+    
+    let tasksHTML = "";
+    for(let k=0; k<4; k++) {
+        const cnt = myCounts[k]; const cssClass = cnt > 0 ? "" : "is-zero"; const label = taskConfig[k].name;
+        tasksHTML += `<div class="task-row ${cssClass}"><span class="task-label">${label}</span><input class="task-input" type="number" data-staff="${i}" data-idx="${k}" value="${cnt}" oninput="manualEdit(this)"></div>`;
+    }
+    gridEl.innerHTML += `<div class="staff-card"><div class="card-border-top" style="background:${c}"></div><div class="card-header"><div class="staff-name" style="color:${c}">Staff ${i+1}</div><button class="lock-btn ${lockClass}" onclick="toggleLock(${i})" aria-label="Lock Staff">${lockIcon}</button></div><div class="card-hero"><div class="hero-main">${heroHTML}</div><div class="hero-sub"><div class="hero-sec">${subHTML}</div></div></div><div class="card-tasks">${tasksHTML}</div></div>`;
+  }
 }
 
 initUI();
