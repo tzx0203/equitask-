@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-<title>Custom Balancer</title>
+<title>Workload Manager Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,7 +17,10 @@
     --input-bg: #f8fafc;
     --primary: #4f46e5;
     --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
     --mode-color: #64748b;
+    --combined-color: #8b5cf6;
   }
   [data-theme="dark"] {
     --bg-body: #0f172a;
@@ -28,11 +31,13 @@
     --input-bg: #334155;
     --primary: #818cf8;
     --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
   }
 
   body.mode-revenue { --mode-color: #10b981; }
   body.mode-time { --mode-color: #3b82f6; }
-  body.mode-time .hero-sub { display: none !important; }
+  body.mode-combined { --mode-color: var(--combined-color); }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -40,168 +45,240 @@
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-body);
     color: var(--text-main);
-    margin: 0; padding: 20px;
+    margin: 0; padding: 12px;
     display: flex; justify-content: center;
   }
 
-  .app-wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
+  .app-wrapper { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
 
   /* --- HEADER --- */
-  header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.5px; flex: 1; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 4px; }
+  h1 { font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.5px; flex: 1; }
   .header-controls { display: flex; gap: 8px; }
 
   .icon-btn {
     background: var(--card-bg); border: 1px solid var(--border); 
     border-radius: 8px; cursor: pointer; color: var(--text-main);
-    padding: 8px; display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s; width: 40px; height: 40px;
+    padding: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; height: 36px;
   }
   .icon-btn:hover { background: var(--border); }
-  .icon-btn svg { width: 20px; height: 20px; }
-  #modeBtn { color: var(--mode-color); border-color: var(--mode-color); font-weight: 700; }
+  .icon-btn svg { width: 18px; height: 18px; }
+  
+  #modeBtn { 
+    color: var(--mode-color); border-color: var(--mode-color); font-weight: 800; 
+    width: auto; padding: 0 12px; gap: 8px; font-size: 11px; text-transform: uppercase;
+  }
   #modeBtn.active-rev { background: rgba(16, 185, 129, 0.1); }
   #modeBtn.active-time { background: rgba(59, 130, 246, 0.1); }
+  #modeBtn.active-combined { background: rgba(139, 92, 246, 0.1); color: var(--combined-color); border-color: var(--combined-color); }
+  
+  #themeBtn, .icon-btn[title="Settings"] { width: 36px; }
 
   /* --- CONFIG --- */
   .config-container {
     background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px; display: flex; flex-direction: column; gap: 16px;
+    padding: 12px; display: flex; flex-direction: column; gap: 12px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
 
   .mode-indicator {
     font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-    color: var(--mode-color); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
+    color: var(--mode-color); display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
   }
   .mode-indicator svg { width: 14px; height: 14px; }
 
-  /* Rates Settings */
-  .rates-toggle {
-    display: flex; align-items: center; gap: 6px; cursor: pointer;
-    font-size: 13px; font-weight: 600; color: var(--text-muted);
-    background: none; border: none; padding: 0; width: fit-content;
+  .input-strip { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px; 
   }
-  .rates-toggle:hover { color: var(--primary); }
-  
-  .rates-panel {
-    display: none; flex-direction: column; gap: 12px;
-    padding: 12px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border);
-    animation: fadeIn 0.2s ease;
-  }
-  .rates-panel.open { display: flex; }
-  
-  .rate-row { display: flex; gap: 10px; align-items: center; }
-  .rate-label { font-size: 12px; font-weight: 700; width: 50px; color: var(--text-muted); }
-  .rate-input-group { flex: 1; display: flex; gap: 8px; align-items: center; }
-  .rate-input-group span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
-  .rate-input { 
-    width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border); 
-    font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--card-bg);
+  @media (min-width: 500px) {
+    .input-strip { grid-template-columns: repeat(5, 1fr); }
+    .input-group.full { grid-column: span 1 !important; }
   }
 
-  /* Main Inputs */
-  .input-strip { display: flex; gap: 10px; flex-wrap: wrap; }
-  .input-group { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 70px; }
-  .input-group.full { flex: 100%; max-width: 100%; }
+  .input-group { display: flex; flex-direction: column; gap: 4px; }
+  .input-group.full { grid-column: span 2; }
   
-  .input-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; height: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .input-group label { 
+    font-size: 10px; font-weight: 700; color: var(--text-muted); 
+    text-transform: uppercase; letter-spacing: 0.5px; 
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; 
+  }
   .input-group input {
-    width: 100%; padding: 10px; text-align: center; border-radius: 8px;
+    width: 100%; padding: 8px 4px; text-align: center; border-radius: 8px;
     border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
-    font-size: 16px; font-weight: 600; transition: border 0.2s;
+    font-size: 16px; font-weight: 700; transition: border 0.2s;
+    appearance: none; -moz-appearance: textfield;
   }
   .input-group input:focus { outline: none; border-color: var(--primary); background: var(--card-bg); }
 
+  /* Stats & Actions */
   .action-strip {
-    display: flex; justify-content: space-between; align-items: center;
-    padding-top: 12px; border-top: 1px solid var(--border); gap: 12px;
+    display: flex; flex-direction: column; gap: 12px;
+    padding-top: 8px; border-top: 1px solid var(--border);
   }
-  .stats-area { display: flex; gap: 8px; }
+  @media(min-width: 480px) {
+    .action-strip { flex-direction: row; justify-content: space-between; align-items: center; }
+  }
+
+  .stats-area { display: flex; gap: 6px; flex-wrap: wrap; }
   .stat-pill {
-    font-size: 13px; background: var(--input-bg); padding: 6px 10px;
+    font-size: 11px; background: var(--input-bg); padding: 4px 8px;
     border-radius: 6px; color: var(--text-muted); border: 1px solid var(--border);
   }
-  .stat-pill strong { color: var(--text-main); margin-left: 4px; }
+  .stat-pill strong { color: var(--text-main); margin-left: 3px; }
   
-  .btn-area { display: flex; gap: 8px; }
+  .btn-area { display: flex; gap: 8px; width: 100%; }
+  @media(min-width: 480px) { .btn-area { width: auto; } }
+
   button.action-btn {
-    cursor: pointer; font-size: 13px; font-weight: 600; padding: 10px 16px;
-    border-radius: 8px; border: none; transition: opacity 0.2s;
+    cursor: pointer; font-size: 13px; font-weight: 700; padding: 10px;
+    border-radius: 8px; border: none; transition: opacity 0.2s; flex: 1;
+    display: flex; align-items: center; justify-content: center;
   }
-  .btn-reset { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-reset { background: transparent; color: var(--text-muted); border: 1px solid transparent; }
+  .btn-reset:hover { background: var(--input-bg); }
+  .btn-save { background: #0f172a; color: #fff; }
   .btn-go { background: var(--primary); color: white; }
   .btn-recalc { background: var(--success); color: white; }
 
-  /* --- CARD GRID --- */
-  .results-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px; width: 100%;
+  /* --- SETTINGS MODAL --- */
+  .modal-backdrop {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;
+    backdrop-filter: blur(2px);
   }
+  .modal-backdrop.open { display: flex; }
+  .settings-card {
+    background: var(--card-bg); width: 90%; max-width: 400px;
+    border-radius: 16px; padding: 20px; border: 1px solid var(--border);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .settings-header { display: flex; justify-content: space-between; align-items: center; }
+  .settings-title { font-size: 16px; font-weight: 800; }
+  .close-modal { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); padding: 0; line-height: 1; }
+  
+  .setting-section { display: flex; flex-direction: column; gap: 8px; }
+  .setting-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+  
+  .select-box {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text-main); font-size: 14px; font-weight: 600;
+  }
+
+  .rate-rows-container { display: flex; flex-direction: column; gap: 12px; }
+  .rate-row { display: flex; gap: 8px; align-items: center; }
+  .rate-name { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--input-bg); min-width: 0; }
+  .rate-input-group { flex: 1; display: flex; gap: 4px; align-items: center; min-width: 0; }
+  .rate-input-group span { font-size: 10px; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+  .rate-input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-main); background: var(--input-bg); text-align: center; min-width: 0; }
+
+  .btn-done { background: var(--primary); color: white; width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; }
+
+  /* --- RESULTS --- */
+  .results-container { display: flex; flex-direction: column; gap: 16px; }
+  .split-grid-wrapper { display: flex; flex-direction: column; gap: 8px; }
+  .grid-title { 
+    font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; 
+    letter-spacing: 0.5px; padding-left: 4px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px;
+  }
+  .grid-title svg { width: 18px; height: 18px; }
+  .results-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; width: 100%; }
+  @media(min-width: 500px) { .results-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
 
   .staff-card {
-    background: var(--card-bg); border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-    display: flex; flex-direction: column;
-    transition: transform 0.2s;
+    background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;
+    display: flex; flex-direction: column; transition: transform 0.2s;
   }
-
   .card-border-top { height: 4px; width: 100%; }
-
-  .card-header {
-    padding: 12px 12px 4px 12px;
-    display: flex; justify-content: space-between; align-items: flex-start;
-  }
-  .staff-name { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+  .card-header { padding: 10px 10px 2px 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .staff-name { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
   
   .lock-btn {
     background: transparent; border: none; cursor: pointer; 
-    color: var(--text-muted); padding: 6px; border-radius: 6px;
+    color: var(--text-muted); padding: 4px; border-radius: 6px;
     transition: all 0.2s; display: flex; opacity: 0.7;
   }
   .lock-btn:hover { background: var(--input-bg); opacity: 1; }
-  .lock-btn svg { width: 18px; height: 18px; stroke-width: 2; }
+  .lock-btn svg { width: 16px; height: 16px; stroke-width: 2; }
   .lock-btn.locked { color: var(--text-main); opacity: 1; background: var(--input-bg); }
   .lock-btn.locked svg { fill: currentColor; }
+  .lock-btn.disabled { opacity: 0.2; pointer-events: none; }
 
-  .card-hero { padding: 4px 12px 16px 12px; text-align: left; }
-  
-  .hero-main { font-size: 32px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1; }
-  .hero-main span { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-left: 2px; vertical-align: baseline; }
+  .card-hero { padding: 4px 10px 12px 10px; text-align: left; }
+  .hero-main { font-size: 24px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; line-height: 1; }
+  .hero-main span { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-left: 2px; vertical-align: baseline; }
   .hero-main span.prefix { margin-right: 2px; margin-left: 0; vertical-align: middle; }
+  .hero-sub { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .hero-sec { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--input-bg); padding: 2px 6px; border-radius: 4px; }
 
-  .hero-sub { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-  .hero-sec { font-size: 13px; font-weight: 600; color: var(--text-muted); background: var(--input-bg); padding: 4px 8px; border-radius: 4px; }
-
-  .card-tasks {
-    padding: 12px;
-    background: var(--input-bg);
-    flex: 1; 
-    display: flex; flex-direction: column; gap: 8px;
-    border-top: 1px solid var(--border);
-  }
-
-  .task-row {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--card-bg); padding: 8px 10px; border-radius: 6px;
-    border: 1px solid var(--border);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-  }
-  
+  .card-tasks { padding: 8px; background: var(--input-bg); flex: 1; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); }
+  .task-row { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   .task-row.is-zero { display: none; }
+  .task-label { font-size: 10px; font-weight: 700; color: var(--text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 80px; }
+  .task-input { width: 30px; border: none; background: transparent; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-main); padding: 0; outline: none; }
   
-  .task-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
-  
-  .task-input {
-    width: 40px; border: none; background: transparent;
-    text-align: right; font-size: 14px; font-weight: 700; color: var(--text-main);
-    padding: 0; outline: none;
-  }
+  .empty-state { text-align: center; width: 100%; color: var(--text-muted); padding: 40px; font-style: italic; }
 
-  .empty-state { text-align: center; width: 100%; color: var(--text-muted); padding: 40px; font-style: italic; grid-column: 1 / -1; }
+  /* History */
+  .history-section { margin-top: 20px; display: none; flex-direction: column; gap: 12px; }
+  .history-section.has-data { display: flex; }
+  .history-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+
+  .rec-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .rec-meta { display: flex; justify-content: space-between; align-items: center; }
+  .rec-date { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+  .btn-del-rec { border: none; background: transparent; color: var(--danger); cursor: pointer; padding: 4px; }
+
+  .rec-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .rec-row-label { font-size: 10px; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+  .rec-row-label svg { width: 14px; height: 14px; }
+  .rec-row-label.lbl-time { color: #3b82f6; }
+  .rec-row-label.lbl-rev { color: var(--success); }
+
+  .var-area { display: flex; gap: 6px; }
+  .var-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; }
+  .var-badge.ok { background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: rgba(16, 185, 129, 0.2); }
+  .var-badge.warn { background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.2); }
+  .var-badge.bad { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.2); }
+
+  .rec-staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .rec-staff-item { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .rsi-name { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+  .rsi-stats { display: flex; justify-content: space-between; align-items: center; }
+  .rsi-money { font-size: 11px; font-weight: 700; color: var(--success); }
+  .rsi-time { font-size: 11px; font-weight: 700; color: var(--text-main); }
+  .rsi-tasks { font-size: 9px; color: var(--text-muted); margin-top: 2px; border-top: 1px solid var(--border); padding-top: 2px; }
+
+  /* Visualization Modal */
+  .vis-modal {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.7); z-index: 200;
+    display: none; flex-direction: column; justify-content: center; align-items: center;
+    backdrop-filter: blur(4px);
+  }
+  .vis-modal.open { display: flex; }
+  .vis-card {
+    background: var(--card-bg); width: 85%; max-width: 300px; padding: 20px;
+    border-radius: 12px; text-align: center; color: var(--text-main);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .vis-spinner { width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .vis-title { font-weight: 800; font-size: 16px; margin-bottom: 8px; }
+  .vis-bar-bg { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 8px; width: 100%; }
+  .vis-bar-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.1s; }
+  .vis-stat { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; font-weight: 600; }
+  .vis-cancel-btn {
+      margin-top: 12px; background: var(--danger); color: white; border: none;
+      padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;
+  }
 
 </style>
 </head>
@@ -210,8 +287,11 @@
 <div class="app-wrapper">
   
   <header>
-    <h1>Workload Balancer</h1>
+    <h1>Workload Manager Pro</h1>
     <div class="header-controls">
+      <button class="icon-btn" onclick="toggleSettings()" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
       <button class="icon-btn active-time" onclick="toggleMode()" id="modeBtn" title="Switch Logic">
         <!-- Icon injected JS -->
       </button>
@@ -221,99 +301,283 @@
     </div>
   </header>
 
+  <!-- Config -->
   <div class="config-container">
-    
-    <div class="mode-indicator" id="modeLabel">
-      <!-- Icon Injected by JS -->
-      Prioritizing: HOURS
-    </div>
+    <div class="mode-indicator" id="modeLabel">Prioritizing: HOURS</div>
 
-    <!-- Rates Toggle -->
-    <button class="rates-toggle" onclick="toggleRates()">
-      <span>Edit Tasks Types</span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    
-    <!-- Dynamic Rates Panel -->
-    <div id="ratesPanel" class="rates-panel">
-      <!-- Generated by JS -->
-    </div>
-
-    <!-- Main Inputs -->
     <div class="input-strip">
       <div class="input-group full">
         <label>Team Size</label>
-        <input id="totalStaff" type="number" min="1" placeholder="e.g. 4" inputmode="numeric">
+        <input id="totalStaff" type="number" min="1" placeholder="4" inputmode="numeric">
       </div>
-      
-      <!-- Dynamic Inputs -->
-      <div class="input-group">
-        <label id="lbl_0">Task 1</label>
-        <input id="in_0" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="input-group">
-        <label id="lbl_1">Task 2</label>
-        <input id="in_1" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="input-group">
-        <label id="lbl_2">Task 3</label>
-        <input id="in_2" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-      <div class="input-group">
-        <label id="lbl_3">Task 4</label>
-        <input id="in_3" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()">
-      </div>
-
+      <div class="input-group"><label id="lbl_0">Task 1</label><input id="in_0" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl_1">Task 2</label><input id="in_1" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl_2">Task 3</label><input id="in_2" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
+      <div class="input-group"><label id="lbl_3">Task 4</label><input id="in_3" type="number" min="0" placeholder="0" inputmode="numeric" oninput="updateStats()"></div>
     </div>
 
     <div class="action-strip">
       <div class="stats-area">
-        <div class="stat-pill">Total: <strong id="valCount">0</strong></div>
+        <div class="stat-pill">Orders: <strong id="valCount">0</strong></div>
         <div class="stat-pill">Time: <strong id="valHours">0h</strong></div>
+        <div class="stat-pill">Combos: <strong id="valComplexity">-</strong></div>
+        <div class="stat-pill">Time Var: <strong id="valTimeVar">-</strong></div>
+        <div class="stat-pill">Rev Var: <strong id="valRevVar">-</strong></div>
       </div>
       <div class="btn-area">
         <button class="action-btn btn-reset" onclick="resetAll()">Reset</button>
+        <button class="action-btn btn-save" onclick="saveDualRecord()">Save</button>
         <button id="calcBtn" class="action-btn btn-go" onclick="initialCalculate()">Distribute</button>
         <button id="recalcBtn" class="action-btn btn-recalc" onclick="recalculateUnlocked()" style="display:none;">Recalc</button>
       </div>
     </div>
   </div>
 
-  <div id="resultsGrid" class="results-grid">
+  <!-- Results -->
+  <div id="resultsContainer" class="results-container">
     <div class="empty-state">Enter inputs to distribute workload...</div>
+  </div>
+
+  <!-- History -->
+  <div id="historySection" class="history-section">
+    <div class="history-title">Saved Records</div>
+    <div id="historyList" style="display:flex; flex-direction:column; gap:12px;"></div>
   </div>
 
 </div>
 
+<!-- Visualization Overlay -->
+<div id="visModal" class="vis-modal">
+  <div class="vis-card">
+    <div class="vis-spinner"></div>
+    <div class="vis-title">Optimizing...</div>
+    <div class="vis-bar-bg"><div id="visBar" class="vis-bar-fill"></div></div>
+    <div id="visStatus" class="vis-stat">Initializing...</div>
+    <div id="visBest" class="vis-stat">Best Diff: -</div>
+    <button class="vis-cancel-btn" onclick="cancelCalculation()">Cancel</button>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal-backdrop">
+  <div class="settings-card">
+    <div class="settings-header">
+      <div class="settings-title">Settings</div>
+      <button class="close-modal" onclick="toggleSettings()">&times;</button>
+    </div>
+
+    <div class="setting-section">
+      <div class="setting-label">Algorithm Strategy</div>
+      <select id="algoSelect" class="select-box" onchange="updateStats()">
+        <option value="brute" selected>Force Brute Force (Exact, Slow)</option>
+        <option value="auto">Auto (Switch at 150M Combos)</option>
+        <option value="genetic">Force Genetic Algo (Approx, Fast)</option>
+      </select>
+    </div>
+    
+    <div class="setting-section">
+      <div class="setting-label">Task Configuration (Name, Mins, Revenue)</div>
+      <div id="ratesPanel" class="rate-rows-container">
+        <!-- Injected JS -->
+      </div>
+    </div>
+
+    <button class="btn-done" onclick="toggleSettings()">Done</button>
+  </div>
+</div>
+
+<!-- WORKER SCRIPT: Embedded securely to prevent string issues -->
+<script id="worker-code" type="javascript/worker">
+  self.onmessage = function(e) {
+    try {
+        const { mode, staffCount, taskConfig, targetMode } = e.data;
+        const sCount = Number(staffCount); // Force Number
+        
+        // --- MODE 1: BRUTE FORCE (Exact) ---
+        if (mode === 'brute') {
+          const { chunkD0, allD1, allD2, allD3 } = e.data;
+          let bestState = null;
+          let bestMetric = { diff1: Infinity, diff2: Infinity };
+          
+          const total = chunkD0.length * allD1.length * allD2.length * allD3.length;
+          let processed = 0;
+          const reportInterval = Math.max(1000, Math.floor(total / 20));
+
+          for (let d0 of chunkD0) {
+            for (let d1 of allD1) {
+              for (let d2 of allD2) {
+                for (let d3 of allD3) {
+                  
+                  // Use Float32 for speed and to avoid string concat issues
+                  let mins = new Float32Array(sCount);
+                  let revs = new Float32Array(sCount);
+                  
+                  for(let s=0; s<sCount; s++) {
+                      // d0[s] is the count assigned to staff 's'
+                      mins[s] = d0[s]*taskConfig[0].min + d1[s]*taskConfig[1].min + d2[s]*taskConfig[2].min + d3[s]*taskConfig[3].min;
+                      revs[s] = d0[s]*taskConfig[0].val + d1[s]*taskConfig[1].val + d2[s]*taskConfig[2].val + d3[s]*taskConfig[3].val;
+                  }
+
+                  let minT = mins[0], maxT = mins[0];
+                  let minR = revs[0], maxR = revs[0];
+                  for(let s=1; s<sCount; s++){
+                      if(mins[s] < minT) minT = mins[s];
+                      if(mins[s] > maxT) maxT = mins[s];
+                      if(revs[s] < minR) minR = revs[s];
+                      if(revs[s] > maxR) maxR = revs[s];
+                  }
+
+                  let diffT = maxT - minT;
+                  let diffR = maxR - minR;
+                  
+                  let dPrimary = targetMode === 'time' ? diffT : diffR;
+                  let dSecondary = targetMode === 'time' ? diffR : diffT;
+
+                  if (dPrimary < bestMetric.diff1 || (dPrimary === bestMetric.diff1 && dSecondary < bestMetric.diff2)) {
+                      bestMetric = { diff1: dPrimary, diff2: dSecondary };
+                      bestState = [d0, d1, d2, d3];
+                  }
+
+                  processed++;
+                  if(processed % reportInterval === 0) self.postMessage({ type: 'progress', val: processed, total: total });
+                }
+              }
+            }
+          }
+          self.postMessage({ type: 'done', bestState, bestMetric });
+        } 
+        
+        // --- MODE 2: GENETIC ALGORITHM (Approx) ---
+        else if (mode === 'genetic') {
+           const { flatTasks, seed } = e.data;
+           const POP_SIZE = 200;
+           const GENERATIONS = 500;
+           const ELITISM = 10;
+           
+           let population = [];
+           // Init Population
+           for(let i=0; i<POP_SIZE; i++) {
+               let genome = new Uint8Array(flatTasks.length);
+               for(let j=0; j<flatTasks.length; j++) genome[j] = Math.floor(Math.random() * sCount);
+               population.push(genome);
+           }
+           
+           const calcFitness = (genome) => {
+               let mins = new Float32Array(sCount);
+               let revs = new Float32Array(sCount);
+               
+               for(let i=0; i<genome.length; i++) {
+                   const s = genome[i];
+                   const t = flatTasks[i];
+                   mins[s] += t.min;
+                   revs[s] += t.val;
+               }
+               
+               let minT = mins[0], maxT = mins[0];
+               let minR = revs[0], maxR = revs[0];
+               for(let s=1; s<sCount; s++) {
+                   if(mins[s] < minT) minT = mins[s];
+                   if(mins[s] > maxT) maxT = mins[s];
+                   if(revs[s] < minR) minR = revs[s];
+                   if(revs[s] > maxR) maxR = revs[s];
+               }
+               
+               const diffT = maxT - minT;
+               const diffR = maxR - minR;
+               const metric = targetMode === 'time' ? diffT : diffR;
+               const metric2 = targetMode === 'time' ? diffR : diffT;
+               
+               return { genome, metric, metric2, mins, revs };
+           };
+
+           for(let g=0; g<GENERATIONS; g++) {
+               let scored = population.map(calcFitness);
+               scored.sort((a,b) => {
+                   if(a.metric !== b.metric) return a.metric - b.metric;
+                   return a.metric2 - b.metric2;
+               });
+               
+               if(g % 50 === 0) self.postMessage({ type: 'progress', val: g, total: GENERATIONS });
+
+               let nextGen = [];
+               for(let i=0; i<ELITISM; i++) nextGen.push(scored[i].genome);
+               
+               while(nextGen.length < POP_SIZE) {
+                   const p1 = scored[Math.floor(Math.random()*50)].genome;
+                   const p2 = scored[Math.floor(Math.random()*50)].genome;
+                   let child = new Uint8Array(p1.length);
+                   const cut = Math.floor(Math.random() * p1.length);
+                   for(let k=0; k<p1.length; k++) child[k] = k < cut ? p1[k] : p2[k];
+                   
+                   if(Math.random() < 0.2) {
+                       const idx = Math.floor(Math.random() * child.length);
+                       child[idx] = Math.floor(Math.random() * sCount);
+                   }
+                   nextGen.push(child);
+               }
+               population = nextGen;
+           }
+           
+           let best = calcFitness(population[0]);
+           
+           // Convert back to grid counts
+           let counts = []; 
+           for(let s=0; s<sCount; s++) counts.push([0,0,0,0]);
+           
+           for(let i=0; i<best.genome.length; i++) {
+               const staffId = best.genome[i];
+               const typeId = flatTasks[i].type;
+               counts[staffId][typeId]++;
+           }
+           
+           let bestState = [];
+           for(let t=0; t<4; t++) {
+               let col = [];
+               for(let s=0; s<sCount; s++) col.push(counts[s][t]);
+               bestState.push(col);
+           }
+           
+           self.postMessage({ type: 'done', bestState, bestMetric: { diff1: best.metric, diff2: best.metric2 } });
+        }
+    } catch(err) {
+        self.postMessage({ type: 'error', msg: err.message });
+    }
+  };
+</script>
+
 <script>
-/* --- ICONS --- */
+/* --- CONSTANTS & STATE --- */
 const icons = {
   moon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
   sun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
   lockOpen: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`,
   lockClosed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
   time: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
-  cash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>`
+  cash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>`,
+  trash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+  layers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`
 };
-
 const staffColors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#f43f5e", "#06b6d4"];
 
-/* --- STATE --- */
 const toInt = v => { const n = parseInt(v); return isNaN(n)?0:n; }
 const inputVal = id => toInt(document.getElementById(id).value);
 
 let currentData = null; 
+let combinedData = null; 
 let locked = []; 
 let staffCount = 0;
-let distMode = 'time'; // 'time' or 'revenue'
+let distMode = 'time'; 
+let sessionHistory = []; 
+let activeWorkers = [];
 
-// CONFIG: 4 Slots. Each has { min, val }
-let taskConfig = [
-  { min: 90, val: 300 },
-  { min: 60, val: 250 },
-  { min: 30, val: 130 },
-  { min: 15, val: 70 }
+const defaultTaskConfig = [
+  { name: "90m", min: 90, val: 305 },
+  { name: "60m Package", min: 60, val: 120 },
+  { name: "60m Private", min: 60, val: 205 },
+  { name: "15m", min: 15, val: 70 }
 ];
+
+let taskConfig = JSON.parse(JSON.stringify(defaultTaskConfig));
 
 /* --- INIT --- */
 function initUI() {
@@ -321,9 +585,237 @@ function initUI() {
   renderRatesPanel();
   renderTheme();
   renderMode();
+  loadHistory();
 }
 
-/* --- THEME --- */
+function getCompositions(n, k) {
+    if (k === 1) return [[n]];
+    let results = [];
+    for (let i = 0; i <= n; i++) {
+        let rest = getCompositions(n - i, k - 1);
+        for (let r of rest) results.push([i, ...r]);
+    }
+    return results;
+}
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+function cancelCalculation() {
+    activeWorkers.forEach(w => w.terminate());
+    activeWorkers = [];
+    document.getElementById('visModal').classList.remove('open');
+}
+
+/* --- THE HYBRID SOLVER ENGINE --- */
+async function findBestDistribution(sCount, ins, targetMode, silent = false) {
+    
+    // 1. Calculate Complexity
+    let complexity = 1;
+    for(let i=0; i<4; i++) {
+        if (ins[i] > 0) {
+            let n = ins[i]; let k = sCount;
+            let top = 1, bot = 1;
+            for(let j=0; j<k-1; j++) { top *= (n+k-1-j); bot *= (j+1); }
+            complexity *= (top/bot);
+        }
+    }
+    
+    const algoPref = document.getElementById('algoSelect').value;
+    
+    // FORCE BRUTE LOGIC: If 'brute', we treat it as low complexity (False) for genetic switch
+    let USE_GENETIC = false;
+    if (algoPref === 'genetic') USE_GENETIC = true;
+    else if (algoPref === 'brute') USE_GENETIC = false;
+    else USE_GENETIC = complexity > 150000000;
+
+    if(!silent) {
+      document.getElementById('visModal').classList.add('open');
+      document.getElementById('visBar').style.width = "0%";
+      if(USE_GENETIC) {
+          document.getElementById('visStatus').innerText = "Running Genetic Evolution...";
+          document.getElementById('visBest').innerText = "High Complexity Mode";
+      } else {
+          document.getElementById('visStatus').innerText = "Calculating Permutations...";
+          document.getElementById('visBest').innerText = "Brute Force Mode";
+      }
+    }
+    await delay(10);
+
+    // Clean existing workers
+    activeWorkers.forEach(w => w.terminate());
+    activeWorkers = [];
+
+    const concurrency = navigator.hardwareConcurrency || 4;
+    
+    // SAFE WORKER BLOB GENERATION
+    const workerContent = document.getElementById('worker-code').textContent;
+    const blob = new Blob([workerContent], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    
+    let promises = [];
+    
+    if (USE_GENETIC) {
+        let flatTasks = [];
+        for(let i=0; i<4; i++) {
+            for(let k=0; k<ins[i]; k++) flatTasks.push({ type: i, min: taskConfig[i].min, val: taskConfig[i].val });
+        }
+
+        for(let i=0; i<concurrency; i++) {
+            const p = new Promise((resolve, reject) => {
+                const worker = new Worker(workerUrl);
+                activeWorkers.push(worker);
+                
+                worker.onerror = (e) => { 
+                    console.error("Worker Error:", e);
+                    reject(new Error("Worker failed (Check console)")); 
+                };
+
+                worker.onmessage = (e) => {
+                    if(e.data.type === 'error') {
+                        reject(new Error(e.data.msg));
+                    } else if (e.data.type === 'progress' && !silent && i===0) {
+                         const pct = ((e.data.val / e.data.total) * 100).toFixed(0);
+                         document.getElementById('visBar').style.width = `${pct}%`;
+                    } else if (e.data.type === 'done') {
+                        resolve(e.data);
+                    }
+                };
+                worker.postMessage({
+                    mode: 'genetic', staffCount: sCount, taskConfig: taskConfig, targetMode: targetMode, flatTasks: flatTasks, seed: i 
+                });
+            });
+            promises.push(p);
+        }
+
+    } else {
+        const d0 = getCompositions(ins[0], sCount);
+        const d1 = getCompositions(ins[1], sCount);
+        const d2 = getCompositions(ins[2], sCount);
+        const d3 = getCompositions(ins[3], sCount);
+        const totalCombinations = d0.length * d1.length * d2.length * d3.length;
+        const chunkSize = Math.ceil(d0.length / concurrency);
+        
+        for (let i = 0; i < concurrency; i++) {
+            const start = i * chunkSize; const end = start + chunkSize;
+            const chunkD0 = d0.slice(start, end);
+            if (chunkD0.length === 0) continue;
+
+            const p = new Promise((resolve, reject) => {
+                const worker = new Worker(workerUrl);
+                activeWorkers.push(worker);
+                
+                worker.onerror = (e) => { 
+                    console.error("Worker Error:", e);
+                    reject(new Error("Worker failed (Check console)")); 
+                };
+
+                let currentProg = 0;
+                worker.onmessage = (e) => {
+                    if(e.data.type === 'error') {
+                         reject(new Error(e.data.msg));
+                    } else if (e.data.type === 'progress') {
+                        currentProg = e.data.val;
+                        if(!silent && i===0) { 
+                             const pct = ((currentProg / (totalCombinations/concurrency)) * 100).toFixed(0);
+                             document.getElementById('visBar').style.width = `${pct}%`;
+                        }
+                    } else if (e.data.type === 'done') {
+                        resolve(e.data);
+                    }
+                };
+                worker.postMessage({
+                    mode: 'brute', staffCount: sCount, taskConfig: taskConfig, targetMode: targetMode, chunkD0: chunkD0, allD1: d1, allD2: d2, allD3: d3
+                });
+            });
+            promises.push(p);
+        }
+    }
+
+    let results;
+    try {
+        results = await Promise.all(promises);
+    } catch(e) {
+        if(!silent) {
+            alert("Calculation Error: " + e.message);
+            document.getElementById('visModal').classList.remove('open');
+        }
+        return null;
+    }
+
+    let globalBestState = null;
+    let globalBestMetric = { diff1: Infinity, diff2: Infinity };
+
+    if(results) {
+        results.forEach(res => {
+            if (!res || !res.bestState) return;
+            let isBetter = false;
+            if (res.bestMetric.diff1 < globalBestMetric.diff1) isBetter = true;
+            else if (res.bestMetric.diff1 === globalBestMetric.diff1 && res.bestMetric.diff2 < globalBestMetric.diff2) isBetter = true;
+
+            if (isBetter) {
+                globalBestMetric = res.bestMetric;
+                globalBestState = res.bestState;
+            }
+        });
+    }
+
+    if(!silent) document.getElementById('visModal').classList.remove('open');
+    URL.revokeObjectURL(workerUrl);
+
+    if (!globalBestState) return null;
+
+    let result = [];
+    for(let s=0; s<sCount; s++) {
+        let counts = [globalBestState[0][s], globalBestState[1][s], globalBestState[2][s], globalBestState[3][s]];
+        let m=0, r=0;
+        counts.forEach((c, i) => { m += c*taskConfig[i].min; r += c*taskConfig[i].val; });
+        result.push({ id: s, counts, revenue: r, minutes: m });
+    }
+    return result;
+}
+
+/* --- RECALC LOGIC --- */
+async function recalculateUnlocked(){
+  if (distMode === 'combined' || !currentData) return;
+  
+  let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+  let lockedHeld = [0,0,0,0];
+  let lockedIndices = [];
+  let activeIndices = [];
+
+  for(let s=0; s<staffCount; s++) {
+      if(locked[s]) {
+          lockedIndices.push(s);
+          for(let i=0; i<4; i++) lockedHeld[i] += currentData.counts[s][i];
+      } else {
+          activeIndices.push(s);
+      }
+  }
+
+  let remainder = [];
+  for(let i=0; i<4; i++) {
+      let r = ins[i] - lockedHeld[i];
+      if (r < 0) { alert("Locked values exceed total inputs."); return; }
+      remainder.push(r);
+  }
+
+  const activeCount = activeIndices.length;
+  if(activeCount === 0) { alert("All staff locked."); return; }
+
+  const solution = await findBestDistribution(activeCount, remainder, distMode);
+
+  if(!solution) return; 
+
+  solution.forEach((res, idx) => {
+      const realStaffIndex = activeIndices[idx]; 
+      currentData.counts[realStaffIndex] = res.counts;
+  });
+
+  renderGrid();
+}
+
+/* --- UI HELPERS --- */
+function toggleSettings() { document.getElementById('settingsModal').classList.toggle('open'); }
 function toggleTheme() {
   const c = document.documentElement.getAttribute('data-theme');
   const n = c === 'dark' ? 'light' : 'dark';
@@ -336,456 +828,308 @@ function renderTheme() {
   document.documentElement.setAttribute('data-theme', t);
   document.getElementById('themeBtn').innerHTML = t === 'dark' ? icons.sun : icons.moon;
 }
-
-/* --- MODE --- */
 function toggleMode() {
-  distMode = distMode === 'time' ? 'revenue' : 'time';
+  if (distMode === 'time') distMode = 'revenue';
+  else if (distMode === 'revenue') distMode = 'combined';
+  else distMode = 'time';
   renderMode();
-  if (currentData) {
-    if(locked.some(l => l)) recalculateUnlocked();
-    else initialCalculate(); 
+  if ((currentData || combinedData)) {
+      if (distMode === 'combined') initialCalculate();
+      else {
+           if(locked.some(l => l) && distMode !== 'combined') recalculateUnlocked();
+           else initialCalculate();
+      }
   }
 }
 function renderMode() {
   const btn = document.getElementById('modeBtn');
   const lbl = document.getElementById('modeLabel');
   const body = document.body;
-
-  body.classList.remove('mode-time', 'mode-revenue');
+  body.classList.remove('mode-time', 'mode-revenue', 'mode-combined');
   body.classList.add(`mode-${distMode}`);
-
+  
   if (distMode === 'time') {
-    btn.innerHTML = icons.time;
-    btn.classList.add('active-time');
-    btn.classList.remove('active-rev');
+    btn.innerHTML = `${icons.time} HOURS`; 
+    btn.classList.add('active-time'); btn.classList.remove('active-rev', 'active-combined');
     lbl.innerHTML = `${icons.time} Prioritizing: HOURS`;
-  } else {
-    btn.innerHTML = icons.cash;
-    btn.classList.add('active-rev');
-    btn.classList.remove('active-time');
+  } else if (distMode === 'revenue') {
+    btn.innerHTML = `${icons.cash} REVENUE`; 
+    btn.classList.add('active-rev'); btn.classList.remove('active-time', 'active-combined');
     lbl.innerHTML = `${icons.cash} Prioritizing: REVENUE`;
+  } else {
+    btn.innerHTML = `${icons.layers} COMBINED`; 
+    btn.classList.add('active-combined'); btn.classList.remove('active-time', 'active-rev');
+    lbl.innerHTML = `${icons.layers} Prioritizing: COMBINED`;
   }
 }
-
-/* --- DYNAMIC CONFIG --- */
-function toggleRates() {
-  document.getElementById('ratesPanel').classList.toggle('open');
-}
-
 function loadConfig() {
   const saved = localStorage.getItem('task_config');
-  if(saved) taskConfig = JSON.parse(saved);
+  if(saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      taskConfig = defaultTaskConfig.map((def, i) => {
+        const p = parsed[i] || {};
+        return { name: p.name || def.name, min: p.min !== undefined ? p.min : def.min, val: p.val !== undefined ? p.val : def.val };
+      });
+    } catch(e) { taskConfig = JSON.parse(JSON.stringify(defaultTaskConfig)); }
+  }
   updateInputLabels();
 }
-
 function saveConfig() {
-  // Read inputs from Rates Panel
   for(let i=0; i<4; i++) {
+    taskConfig[i].name = document.getElementById(`cfg_name_${i}`).value || `Task ${i+1}`;
     taskConfig[i].min = toInt(document.getElementById(`cfg_min_${i}`).value);
     taskConfig[i].val = toInt(document.getElementById(`cfg_val_${i}`).value);
   }
   localStorage.setItem('task_config', JSON.stringify(taskConfig));
-  updateInputLabels();
-  updateStats();
-  if (currentData) renderGrid();
+  updateInputLabels(); updateStats();
+  if (currentData || combinedData) renderGrid();
 }
-
 function renderRatesPanel() {
-  const container = document.getElementById('ratesPanel');
-  container.innerHTML = '';
-  
+  const container = document.getElementById('ratesPanel'); container.innerHTML = '';
   taskConfig.forEach((cfg, i) => {
-    const row = `
-      <div class="rate-row">
-        <div class="rate-label">Task ${i+1}</div>
-        <div class="rate-input-group">
-           <input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()">
-           <span>m</span>
-        </div>
-        <div class="rate-input-group">
-           <input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()">
-           <span>RM</span>
-        </div>
-      </div>
-    `;
-    container.innerHTML += row;
+    container.innerHTML += `<div class="rate-row"><input class="rate-name" type="text" id="cfg_name_${i}" value="${cfg.name}" placeholder="Name" oninput="saveConfig()"><div class="rate-input-group"><input class="rate-input" type="number" id="cfg_min_${i}" value="${cfg.min}" oninput="saveConfig()"><span>m</span></div><div class="rate-input-group"><input class="rate-input" type="number" id="cfg_val_${i}" value="${cfg.val}" oninput="saveConfig()"><span>RM</span></div></div>`;
   });
 }
-
 function updateInputLabels() {
-  taskConfig.forEach((cfg, i) => {
-    document.getElementById(`lbl_${i}`).innerText = `${cfg.min}m (${cfg.val})`;
-  });
+  taskConfig.forEach((cfg, i) => { document.getElementById(`lbl_${i}`).innerText = `${cfg.name} (${cfg.val})`; });
 }
 
-
-/* --- CALCULATIONS --- */
 function updateStats(){
-  let count = 0;
-  let hrs = 0;
-  
-  for(let i=0; i<4; i++) {
-    const qty = inputVal(`in_${i}`);
-    count += qty;
-    hrs += (qty * taskConfig[i].min);
+  let count = 0; let hrs = 0;
+  let complexity = 1;
+  const sCount = Math.max(1, inputVal("totalStaff"));
+  for(let i=0; i<4; i++) { 
+    const qty = inputVal(`in_${i}`); 
+    count += qty; 
+    hrs += (qty * taskConfig[i].min); 
+    if (qty > 0) {
+       const n = qty; const k = sCount;
+       let top = 1; let bot = 1;
+       let limit = Math.min(k-1, n);
+       for(let j=0; j<k-1; j++) { top *= (n+k-1-j); bot *= (j+1); }
+       complexity *= (top/bot);
+    }
   }
   hrs = hrs / 60;
-  
   document.getElementById("valCount").innerText = count;
   document.getElementById("valHours").innerText = (Number.isInteger(hrs)?hrs:hrs.toFixed(1))+"h";
-}
 
-/* --- DISTRIBUTION LOGIC --- */
-function distribute(tasks, staffStates) {
-    // 1. Initial Sort
-    tasks.sort((a, b) => {
-      if (distMode === 'time') {
-        return b.dur - a.dur;
-      } else {
-        if (b.val !== a.val) return b.val - a.val;
-        return b.dur - a.dur;
+  let compStr = "-";
+  if (count > 0) {
+      if (complexity >= 1000000) compStr = (complexity / 1000000).toFixed(1) + "M";
+      else if (complexity >= 1000) compStr = (complexity / 1000).toFixed(1) + "k";
+      else compStr = Math.round(complexity);
+      
+      const algo = document.getElementById('algoSelect').value;
+      if (algo === 'brute') compStr += ` (Exact)`;
+      else if (algo === 'genetic') compStr += ` (Genetic)`;
+      else {
+         const useGA = complexity > 150000000;
+         compStr += useGA ? ` (Genetic)` : ` (Exact)`;
       }
-    });
-
-    // 2. Greedy Assignment
-    tasks.forEach(task => {
-        let bestIdx = -1;
-        let minPrimary = Infinity;
-        let minSecondary = Infinity;
-
-        for (let i=0; i<staffStates.length; i++) {
-            if (staffStates[i].locked) continue;
-            
-            const sRev = staffStates[i].revenue;
-            const sTime = staffStates[i].minutes;
-            
-            const currentPrimary = distMode === 'time' ? sTime : sRev;
-            const currentSecondary = distMode === 'time' ? 0 : sTime;
-
-            if (currentPrimary < minPrimary) {
-                minPrimary = currentPrimary;
-                minSecondary = currentSecondary;
-                bestIdx = i;
-            } else if (currentPrimary === minPrimary) {
-                if (distMode === 'revenue' && currentSecondary < minSecondary) {
-                    minSecondary = currentSecondary;
-                    bestIdx = i;
-                } else if (distMode === 'time') {
-                   bestIdx = i; 
-                }
-            }
-        }
-
-        if (bestIdx !== -1) {
-            assignTask(staffStates[bestIdx], task);
-        }
-    });
-
-    // 3. OPTIMIZATION PASS
-    optimizeDistribution(staffStates);
-}
-
-function assignTask(staff, task) {
-    staff.minutes += task.dur;
-    staff.revenue += task.val;
-    staff.tasks.push(task); 
-    staff.counts[task.typeIdx]++;
-}
-
-function removeTask(staff, taskIndex) {
-    const task = staff.tasks[taskIndex];
-    staff.minutes -= task.dur;
-    staff.revenue -= task.val;
-    staff.tasks.splice(taskIndex, 1);
-    staff.counts[task.typeIdx]--;
-    return task;
-}
-
-function optimizeDistribution(staffStates) {
-    const activeStaff = staffStates.filter(s => !s.locked);
-    if (activeStaff.length < 2) return;
-
-    let improved = true;
-    let limit = 2000; 
-
-    while (improved && limit > 0) {
-        improved = false;
-        limit--;
-
-        let metrics = activeStaff.map(getMetric);
-        let globalMin = Math.min(...metrics);
-        let globalMax = Math.max(...metrics);
-        let currentRange = globalMax - globalMin;
-
-        if (currentRange === 0) break; 
-
-        // Check All vs All Pairs
-        for (let i = 0; i < activeStaff.length; i++) {
-            for (let j = 0; j < activeStaff.length; j++) {
-                if (i === j) continue;
-
-                let s1 = activeStaff[i];
-                let s2 = activeStaff[j];
-
-                // TRY SWAP
-                for (let t1 = 0; t1 < s1.tasks.length; t1++) {
-                    for (let t2 = 0; t2 < s2.tasks.length; t2++) {
-                        
-                        let task1 = s1.tasks[t1];
-                        let task2 = s2.tasks[t2];
-                        let val1 = getVal(task1);
-                        let val2 = getVal(task2);
-
-                        if (val1 === val2) continue;
-
-                        let s1New = getMetric(s1) - val1 + val2;
-                        let s2New = getMetric(s2) - val2 + val1;
-
-                        let newMetrics = [...metrics];
-                        newMetrics[i] = s1New;
-                        newMetrics[j] = s2New;
-                        
-                        let newMax = Math.max(...newMetrics);
-                        let newMin = Math.min(...newMetrics);
-                        let newRange = newMax - newMin;
-
-                        if (newRange < currentRange) {
-                            removeTask(s1, t1);
-                            removeTask(s2, t2);
-                            assignTask(s1, task2);
-                            assignTask(s2, task1);
-                            improved = true;
-                            metrics[i] = s1New; 
-                            metrics[j] = s2New;
-                            currentRange = newRange;
-                            break; 
-                        }
-                    }
-                    if (improved) break;
-                }
-                if (improved) break;
-            }
-            if (improved) break;
-        }
-    }
-}
-
-function getMetric(staff) {
-    return distMode === 'time' ? staff.minutes : staff.revenue;
-}
-function getVal(task) {
-    return distMode === 'time' ? task.dur : task.val;
-}
-
-
-function initialCalculate(){
-  staffCount = Math.max(1, inputVal("totalStaff"));
-  
-  // Build Pool based on Config
-  let pool = [];
-  let totalTasks = 0;
-  for(let i=0; i<4; i++) {
-    const qty = inputVal(`in_${i}`);
-    totalTasks += qty;
-    for(let k=0; k<qty; k++) {
-        pool.push({ 
-            dur: taskConfig[i].min, 
-            val: taskConfig[i].val, 
-            typeIdx: i 
-        });
-    }
   }
+  document.getElementById("valComplexity").innerText = compStr;
+}
 
+async function saveDualRecord() {
+    const btn = document.querySelector('.btn-save'); const originalText = btn.innerText;
+    if(!currentData && !combinedData) { alert("Please distribute first."); return; }
+    btn.innerText = "Saving..."; btn.disabled = true; await delay(50);
+    try {
+        const sCount = staffCount;
+        let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+        const resTime = await findBestDistribution(sCount, ins, 'time', true);
+        const resRev = await findBestDistribution(sCount, ins, 'revenue', true);
+        if (!resTime || !resRev || resTime.length === 0 || resRev.length === 0) throw new Error("Calculation failed");
+        const mapRes = (r) => r.map(s => ({id:s.id+1, counts:s.counts, rev:s.revenue, mins:s.minutes}));
+        const record = { id: Date.now(), date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), staffCount: sCount, config: JSON.parse(JSON.stringify(taskConfig)), resTime: mapRes(resTime), resRev: mapRes(resRev) };
+        sessionHistory.unshift(record); loadHistory();
+    } catch (e) { console.error(e); alert("Error saving: " + e.message); } finally { btn.innerText = originalText; btn.disabled = false; }
+}
+
+async function initialCalculate(){
+  staffCount = Math.max(1, inputVal("totalStaff"));
+  let ins = []; for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
+  const totalTasks = ins.reduce((a,b)=>a+b,0);
   if(staffCount<=0 || totalTasks===0) { alert("Please check inputs"); return; }
-
-  let states=[];
-  for(let i=0;i<staffCount;i++) states.push({
-    id:i, locked:false, minutes:0, revenue:0,
-    tasks: [],
-    counts: [0,0,0,0] // Track counts for config indices 0-3
-  });
-
-  distribute(pool, states);
   
-  syncData(states);
+  if (distMode === 'combined') {
+      const rTime = await findBestDistribution(staffCount, ins, 'time');
+      const rRev = await findBestDistribution(staffCount, ins, 'revenue');
+      if (!rTime || !rRev) return; 
+      combinedData = { timeRes: rTime.map(s => ({...s, counts:[...s.counts]})), revRes: rRev.map(s => ({...s, counts:[...s.counts]})) };
+      currentData = null; 
+  } else {
+      const bestResult = await findBestDistribution(staffCount, ins, distMode);
+      if (!bestResult || bestResult.length === 0) return; 
+      currentData = { counts: [] };
+      bestResult.forEach(s => { currentData.counts.push([...s.counts]); });
+      combinedData = null;
+  }
   locked = new Array(staffCount).fill(false);
-  renderGrid();
+  renderGrid(); 
   document.getElementById("recalcBtn").style.display = "none";
 }
 
-function recalculateUnlocked(){
-  if (!currentData) return;
-  
-  // Read inputs
-  let ins = [];
-  for(let i=0; i<4; i++) ins.push(inputVal(`in_${i}`));
-
-  let held = [0,0,0,0];
-  let states = [];
-
-  for (let s=0; s<staffCount; s++){
-    const l = locked[s];
-    let sTasks = [];
-    let sCounts = currentData.counts[s];
-
-    if(l) { 
-        for(let i=0; i<4; i++) {
-            held[i] += sCounts[i];
-            for(let k=0; k<sCounts[i]; k++) {
-                sTasks.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
-            }
-        }
-    }
-    
-    // Calc current totals
-    let m = 0; let r = 0;
-    sTasks.forEach(t => { m+=t.dur; r+=t.val; });
-
-    states.push({ 
-      id:s, locked:l, minutes:l?m:0, revenue:l?r:0, 
-      tasks: sTasks,
-      counts: l ? [...sCounts] : [0,0,0,0]
-    });
-  }
-
-  for(let i=0; i<4; i++) {
-      if(held[i] > ins[i]) { alert("Locked values exceed inputs"); return; }
-  }
-  
-  let pool = [];
-  for(let i=0; i<4; i++) {
-      const needed = ins[i] - held[i];
-      for(let k=0; k<needed; k++) {
-          pool.push({ dur: taskConfig[i].min, val: taskConfig[i].val, typeIdx: i });
-      }
-  }
-  
-  if(pool.length) distribute(pool, states);
-  
-  syncData(states);
-  renderGrid();
-}
-
-function syncData(states) {
-  currentData = { counts: [] };
-  states.forEach(s => {
-      currentData.counts.push([...s.counts]);
-  });
-}
-
-function renderGrid(){
-  const grid = document.getElementById("resultsGrid");
-  grid.innerHTML = "";
-
-  for(let i=0; i<staffCount; i++){
-    const c = staffColors[i % staffColors.length];
-    const myCounts = currentData.counts[i];
-    
-    let totalMins = 0;
-    let totalRev = 0;
-    myCounts.forEach((cnt, idx) => {
-        totalMins += cnt * taskConfig[idx].min;
-        totalRev += cnt * taskConfig[idx].val;
-    });
-
-    const hrs = totalMins/60;
-    const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
-    
-    const isLocked = locked[i];
-    const lockClass = isLocked ? "locked" : "";
-    const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
-    
-    let heroHTML, subHTML;
-    if (distMode === 'time') {
-        heroHTML = `${hrsTxt}<span>h</span>`;
-        subHTML = ``; 
-    } else {
-        heroHTML = `<span class="prefix">RM</span>${totalRev}`;
-        subHTML = `${hrsTxt}h`;
-    }
-
-    // Build Task Rows Dynamically
-    let tasksHTML = "";
-    for(let k=0; k<4; k++) {
-        const cnt = myCounts[k];
-        const cssClass = cnt > 0 ? "" : "is-zero";
-        const label = `${taskConfig[k].min}m`;
-        
-        tasksHTML += `
-          <div class="task-row ${cssClass}">
-            <span class="task-label">${label}</span>
-            <input class="task-input" type="number" data-staff="${i}" data-idx="${k}" value="${cnt}" oninput="manualEdit(this)">
-          </div>
-        `;
-    }
-
-    const cardHTML = `
-      <div class="staff-card">
-        <div class="card-border-top" style="background:${c}"></div>
-        <div class="card-header">
-          <div class="staff-name" style="color:${c}">Staff ${i+1}</div>
-          <button class="lock-btn ${lockClass}" onclick="toggleLock(${i})" aria-label="Lock Staff">${lockIcon}</button>
-        </div>
-        <div class="card-hero">
-          <div class="hero-main">${heroHTML}</div>
-          <div class="hero-sub">
-            <div class="hero-sec">${subHTML}</div>
-          </div>
-        </div>
-        <div class="card-tasks">
-            ${tasksHTML}
-        </div>
-      </div>
-    `;
-    grid.innerHTML += cardHTML;
-  }
-}
-
 function manualEdit(el){
-  const staff = el.getAttribute('data-staff');
-  const idx = el.getAttribute('data-idx');
-  let val = parseInt(el.value);
-  if(isNaN(val)) val = 0;
-  
-  currentData.counts[staff][idx] = val;
-  
-  // Recalc totals for card update
-  let totalMins = 0; let totalRev = 0;
-  currentData.counts[staff].forEach((cnt, k) => {
-      totalMins += cnt * taskConfig[k].min;
-      totalRev += cnt * taskConfig[k].val;
-  });
-
-  const hrs = totalMins/60;
-  const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
-  
-  const card = el.closest('.staff-card');
-  if (distMode === 'time') {
-    card.querySelector('.hero-main').innerHTML = `${hrsTxt}<span>h</span>`;
-  } else {
-    card.querySelector('.hero-main').innerHTML = `<span class="prefix">RM</span>${totalRev}`;
-    card.querySelector('.hero-sec').innerHTML = `${hrsTxt}h`;
-  }
-  
-  if(val > 0) el.parentElement.classList.remove('is-zero');
+  const staff = parseInt(el.getAttribute('data-staff')); 
+  const idx = parseInt(el.getAttribute('data-idx'));
+  const mode = el.getAttribute('data-mode');
+  let val = parseInt(el.value); if(isNaN(val)) val = 0;
+  if (distMode === 'combined') {
+     if(mode === 'combined_t') combinedData.timeRes[staff].counts[idx] = val;
+     if(mode === 'combined_r') combinedData.revRes[staff].counts[idx] = val;
+     const recalc = (arr) => { let m=0, r=0; arr[staff].counts.forEach((c, k) => { m += c * taskConfig[k].min; r += c * taskConfig[k].val; }); arr[staff].minutes = m; arr[staff].revenue = r; }
+     if(mode === 'combined_t') recalc(combinedData.timeRes); else recalc(combinedData.revRes);
+  } else { currentData.counts[staff][idx] = val; }
+  renderGrid();
 }
 
-function toggleLock(i){
-  locked[i] = !locked[i];
-  document.getElementById("recalcBtn").style.display = locked.some(x=>x) ? "inline-block" : "none";
-  renderGrid();
+function toggleLock(i){ 
+    if(distMode === 'combined') return; 
+    locked[i] = !locked[i]; 
+    document.getElementById("recalcBtn").style.display = locked.some(x=>x) ? "flex" : "none"; 
+    renderGrid(); 
 }
 
 function resetAll(){
   document.getElementById("totalStaff").value = "";
   for(let i=0; i<4; i++) document.getElementById(`in_${i}`).value = "";
   updateStats();
-  document.getElementById("resultsGrid").innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
-  currentData = null; locked=[]; staffCount=0;
+  document.getElementById("resultsContainer").innerHTML = `<div class="empty-state">Enter inputs to distribute workload...</div>`;
+  currentData = null; combinedData = null; locked=[]; staffCount=0;
   document.getElementById("recalcBtn").style.display = "none";
+  document.getElementById("valTimeVar").innerHTML = "-";
+  document.getElementById("valRevVar").innerHTML = "-";
 }
 
-// Start
+/* --- MISSING FUNCTIONS RESTORED --- */
+function generateVarianceBadges(data) {
+    if(!data || data.length === 0) return '';
+    const mins = data.map(s => s.minutes || s.mins);
+    const minT = Math.min(...mins); const maxT = Math.max(...mins);
+    let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
+    let tBadge = parseFloat(tVar) < 10 ? "✅" : (parseFloat(tVar) < 20 ? "⚠️" : "❌");
+
+    const revs = data.map(s => s.revenue || s.rev);
+    const minRev = Math.min(...revs); const maxRev = Math.max(...revs);
+    let revVar = minRev > 0 ? (((maxRev - minRev) / minRev) * 100).toFixed(1) : "0.0";
+    let rBadge = parseFloat(revVar) < 10 ? "✅" : (parseFloat(revVar) < 20 ? "⚠️" : "❌");
+
+    return `<span class="var-badge ${parseFloat(tVar)<10?'ok':'warn'}">Time: ${tVar}%</span><span class="var-badge ${parseFloat(revVar)<10?'ok':'warn'}">Rev: ${revVar}%</span>`;
+}
+
+function renderGrid(){
+  const grid = document.getElementById("resultsContainer"); grid.innerHTML = "";
+  
+  // -- COMBINED MODE --
+  if (distMode === 'combined' && combinedData) {
+      document.getElementById("valTimeVar").innerHTML = "N/A";
+      document.getElementById("valRevVar").innerHTML = "N/A";
+      
+      const renderSubGrid = (data, type) => {
+          let html = "";
+          data.forEach((staff, i) => {
+             const c = staffColors[i % staffColors.length];
+             let totalMins = 0; let totalRev = 0;
+             staff.counts.forEach((cnt, idx) => { totalMins += cnt * taskConfig[idx].min; totalRev += cnt * taskConfig[idx].val; });
+             const hrs = totalMins/60; const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+             
+             let tasksHTML = "";
+             for(let k=0; k<4; k++) {
+                const cnt = staff.counts[k]; const cssClass = cnt > 0 ? "" : "is-zero"; const label = taskConfig[k].name;
+                tasksHTML += `<div class="task-row ${cssClass}"><span class="task-label">${label}</span><input class="task-input" type="number" data-staff="${i}" data-idx="${k}" data-mode="combined_${type==='HOURS'?'t':'r'}" value="${cnt}" oninput="manualEdit(this)"></div>`;
+             }
+             
+             let heroHTML, subHTML;
+             if(type === 'HOURS') { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = `<span class="prefix">RM</span>${totalRev}`; }
+             else { heroHTML = `<span class="prefix">RM</span>${totalRev}`; subHTML = `${hrsTxt}h`; }
+             
+             html += `<div class="staff-card"><div class="card-border-top" style="background:${c}"></div><div class="card-header"><div class="staff-name" style="color:${c}">Staff ${i+1}</div></div><div class="card-hero"><div class="hero-main">${heroHTML}</div><div class="hero-sub"><div class="hero-sec">${subHTML}</div></div></div><div class="card-tasks">${tasksHTML}</div></div>`;
+          });
+          return html;
+      };
+
+      grid.innerHTML = `
+      <div class="split-grid-wrapper">
+         <div class="grid-title">${icons.time} Optimized for HOURS <div style="margin-left:auto; display:flex; gap:6px;">${generateVarianceBadges(combinedData.timeRes)}</div></div>
+         <div class="results-grid">${renderSubGrid(combinedData.timeRes, 'HOURS')}</div>
+      </div>
+      <div class="split-grid-wrapper" style="margin-top:12px;">
+         <div class="grid-title">${icons.cash} Optimized for REVENUE <div style="margin-left:auto; display:flex; gap:6px;">${generateVarianceBadges(combinedData.revRes)}</div></div>
+         <div class="results-grid">${renderSubGrid(combinedData.revRes, 'REVENUE')}</div>
+      </div>`;
+      return;
+  }
+
+  // -- SINGLE MODE --
+  if (!currentData) return;
+
+  let allMins = []; let allRevs = [];
+  currentData.counts.forEach((cnt, idx) => {
+      let m = 0; let r = 0;
+      cnt.forEach((c, k) => { m += c * taskConfig[k].min; r += c * taskConfig[k].val; });
+      allMins.push(m); allRevs.push(r);
+  });
+  
+  const minT = Math.min(...allMins); const maxT = Math.max(...allMins);
+  let tVar = minT > 0 ? (((maxT-minT)/minT)*100).toFixed(1) : "0.0";
+  let tBadge = parseFloat(tVar) < 10 ? "✅" : (parseFloat(tVar) < 20 ? "⚠️" : "❌");
+  document.getElementById("valTimeVar").innerHTML = `${tVar}% ${tBadge}`;
+
+  const minR = Math.min(...allRevs); const maxR = Math.max(...allRevs);
+  let rVar = minR > 0 ? (((maxR-minR)/minR)*100).toFixed(1) : "0.0";
+  let rBadge = parseFloat(rVar) < 10 ? "✅" : (parseFloat(rVar) < 20 ? "⚠️" : "❌");
+  document.getElementById("valRevVar").innerHTML = `${rVar}% ${rBadge}`;
+
+  grid.innerHTML = '<div class="results-grid"></div>';
+  const gridEl = grid.querySelector('.results-grid');
+
+  for(let i=0; i<staffCount; i++){
+    const c = staffColors[i % staffColors.length]; const myCounts = currentData.counts[i];
+    let totalMins = 0; let totalRev = 0;
+    myCounts.forEach((cnt, idx) => { totalMins += cnt * taskConfig[idx].min; totalRev += cnt * taskConfig[idx].val; });
+    const hrs = totalMins/60; const hrsTxt = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+    const isLocked = locked[i]; const lockClass = isLocked ? "locked" : ""; const lockIcon = isLocked ? icons.lockClosed : icons.lockOpen;
+    
+    let heroHTML, subHTML;
+    if (distMode === 'time') { heroHTML = `${hrsTxt}<span>h</span>`; subHTML = `<span class="prefix">RM</span>${totalRev}`; } 
+    else { heroHTML = `<span class="prefix">RM</span>${totalRev}`; subHTML = `${hrsTxt}h`; }
+    
+    let tasksHTML = "";
+    for(let k=0; k<4; k++) {
+        const cnt = myCounts[k]; const cssClass = cnt > 0 ? "" : "is-zero"; const label = taskConfig[k].name;
+        tasksHTML += `<div class="task-row ${cssClass}"><span class="task-label">${label}</span><input class="task-input" type="number" data-staff="${i}" data-idx="${k}" value="${cnt}" oninput="manualEdit(this)"></div>`;
+    }
+    gridEl.innerHTML += `<div class="staff-card"><div class="card-border-top" style="background:${c}"></div><div class="card-header"><div class="staff-name" style="color:${c}">Staff ${i+1}</div><button class="lock-btn ${lockClass}" onclick="toggleLock(${i})" aria-label="Lock Staff">${lockIcon}</button></div><div class="card-hero"><div class="hero-main">${heroHTML}</div><div class="hero-sub"><div class="hero-sec">${subHTML}</div></div></div><div class="card-tasks">${tasksHTML}</div></div>`;
+  }
+}
+
+function loadHistory() {
+  const container = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  if (sessionHistory.length === 0) { container.classList.remove('has-data'); return; }
+  container.classList.add('has-data');
+  list.innerHTML = '';
+
+  const renderStaffGrid = (staffData, cfg) => {
+      let html = '';
+      staffData.forEach((staff, idx) => {
+          const color = staffColors[idx % staffColors.length];
+          const hrs = (staff.mins / 60).toFixed(1);
+          let breakdown = [];
+          staff.counts.forEach((c, i) => { if(c > 0) breakdown.push(`${cfg[i].name}:<b>${c}</b>`); });
+          html += `<div class="rec-staff-item"><div class="rsi-name" style="color:${color}">Staff ${staff.id}</div><div class="rsi-stats"><div class="rsi-money">RM ${staff.rev}</div><div class="rsi-time">${hrs}h</div></div><div class="rsi-tasks">${breakdown.join(' &bull; ')}</div></div>`;
+      });
+      return html;
+  };
+
+  sessionHistory.forEach(rec => {
+    list.innerHTML += `<div class="rec-card"><div class="rec-meta"><span class="rec-date">${rec.date}</span></div><div><div class="rec-row-header"><div class="rec-row-label lbl-time">${icons.time} Optimized for HOURS</div><div style="display:flex; gap:4px">${generateVarianceBadges(rec.resTime)}</div></div><div class="rec-staff-grid">${renderStaffGrid(rec.resTime, rec.config)}</div></div><div style="margin-top:12px; border-top:1px dashed var(--border); padding-top:12px;"><div class="rec-row-header"><div class="rec-row-label lbl-rev">${icons.cash} Optimized for REVENUE</div><div style="display:flex; gap:4px">${generateVarianceBadges(rec.resRev)}</div></div><div class="rec-staff-grid">${renderStaffGrid(rec.resRev, rec.config)}</div></div></div>`;
+  });
+}
+
 initUI();
 </script>
 </body>
